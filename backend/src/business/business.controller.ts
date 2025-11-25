@@ -1,0 +1,39 @@
+import { Controller, Get, Post, Body, Patch, Param, UseGuards, Request } from '@nestjs/common';
+import { BusinessService } from './business.service';
+import { CreateBusinessDto } from './dto/create-business.dto';
+import { UpdateBusinessDto } from './dto/update-business.dto';
+import { AuthGuard } from '@nestjs/passport';
+
+@Controller('business')
+export class BusinessController {
+  constructor(private readonly businessService: BusinessService) {}
+
+  @UseGuards(AuthGuard('jwt'))
+  @Post()
+  create(@Request() req, @Body() createBusinessDto: CreateBusinessDto) {
+    return this.businessService.create(req.user.userId, createBusinessDto);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Get()
+  findAll(@Request() req) {
+    return this.businessService.findAll(req.user.userId);
+  }
+
+  @Get(':slug/public')
+  findBySlug(@Param('slug') slug: string) {
+    return this.businessService.findBySlug(slug);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.businessService.findOne(id);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Patch(':id')
+  update(@Request() req, @Param('id') id: string, @Body() updateBusinessDto: UpdateBusinessDto) {
+    return this.businessService.update(id, req.user.userId, updateBusinessDto);
+  }
+}
