@@ -12,7 +12,7 @@
     "crons": [
         {
             "schedule": "* * * * *",
-            "command": "curl -X POST http://localhost:$PORT/cron/send-reminders"
+            "command": "curl -X POST http://localhost:$PORT/api/cron/send-reminders"
         }
     ]
 }

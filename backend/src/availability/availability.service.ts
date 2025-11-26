@@ -37,7 +37,9 @@ export class AvailabilityService {
 
     let intervals: TimeInterval[] = [];
     if (specialDay && specialDay.intervals) {
-      intervals = specialDay.intervals as TimeInterval[];
+      intervals = Array.isArray(specialDay.intervals)
+        ? (specialDay.intervals as TimeInterval[])
+        : [];
     } else {
       const schedule = await this.prisma.schedule.findUnique({
         where: {
@@ -48,7 +50,9 @@ export class AvailabilityService {
         },
       });
       if (!schedule || !schedule.isActive) return [];
-      intervals = schedule.intervals as TimeInterval[];
+      intervals = Array.isArray(schedule.intervals)
+        ? (schedule.intervals as TimeInterval[])
+        : [];
     }
 
     // 3. Get Existing Bookings
@@ -56,7 +60,10 @@ export class AvailabilityService {
       where: {
         businessId,
         date: date,
-        status: { not: 'CANCELLED' },
+        status: { not: 'cancelled' },
+      },
+      include: {
+        service: true,
       },
     });
 
@@ -79,12 +86,16 @@ export class AvailabilityService {
         const slotEnd = format(addMinutes(currTime, totalDuration), 'HH:mm');
 
         // Check collision
-        const isOverlapping = bookings.some(booking => {
-          const bStart = booking.startTime; // "HH:mm"
-          const bEnd = booking.endTime;     // "HH:mm"
-          
-          // Simple string comparison works for HH:mm if 24h
-          return (slotStart < bEnd && slotEnd > bStart);
+        const isOverlapping = bookings.some((booking) => {
+          const bStart = this.timeToMinutes(booking.startTime); // "HH:mm"
+          const bEnd =
+            this.timeToMinutes(booking.endTime) +
+            (booking.service?.cleaningTimeMinutes || 0);
+
+          const slotStartMin = this.timeToMinutes(slotStart);
+          const slotEndMin = this.timeToMinutes(slotEnd);
+
+          return slotStartMin < bEnd && slotEndMin > bStart;
         });
 
         if (!isOverlapping) {
@@ -96,5 +107,10 @@ export class AvailabilityService {
     }
 
     return availableSlots;
+  }
+
+  private timeToMinutes(time: string): number {
+    const [h, m] = time.split(':').map(Number);
+    return h * 60 + m;
   }
 }
