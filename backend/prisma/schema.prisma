@@ -10,6 +10,17 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Role {
+  OWNER
+  STAFF
+}
+
+enum StaffStatus {
+  PENDING
+  ACTIVE
+  INACTIVE
+}
+
 model User {
   id           String @id @default(cuid())
   name         String
@@ -17,6 +28,7 @@ model User {
   password     String
   createdAt    DateTime @default(now())
   businesses   Business[]
+  actionLogs   ActionLog[]
 }
 
 model Business {
@@ -26,21 +38,48 @@ model Business {
   name          String
   slug          String @unique
   phoneNumber   String?
-  timezone      String
+  timezone      String @default("UTC")
   whatsappToken String?
+  
+  // Branding
+  logoUrl       String?
+  brandColor    String?
+  bannerUrl     String?
+
   createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now()) @updatedAt
+
   staff         Staff[]
   services      Service[]
   bookings      Booking[]
-  schedule      Schedule[]
+  schedules     Schedule[]
+  specialDays   SpecialDay[]
+  
+  // Logs
+  actionLogs    ActionLog[]
+  errorLogs     ErrorLog[]
+  
+  // Billing
+  subscription  Subscription?
 }
 
 model Staff {
-  id         String @id @default(cuid())
-  businessId String
-  business   Business @relation(fields: [businessId], references: [id])
-  name       String
-  role       String
+  id            String @id @default(cuid())
+  businessId    String
+  business      Business @relation(fields: [businessId], references: [id])
+  name          String
+  email         String
+  phone         String?
+  role          Role @default(STAFF)
+  permissions   Json? // e.g. { canManageServices: true, canManageBookings: true }
+  
+  inviteToken   String? @unique
+  status        StaffStatus @default(PENDING)
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now()) @updatedAt
+
+  @@unique([businessId, email])
 }
 
 model Service {
@@ -48,9 +87,12 @@ model Service {
   businessId          String
   business            Business @relation(fields: [businessId], references: [id])
   name                String
+  description         String?
   durationMinutes     Int
-  cleaningTimeMinutes Int
+  cleaningTimeMinutes Int @default(0)
   price               Float
+  isActive            Boolean @default(true)
+  
   bookings            Booking[]
 }
 
@@ -65,8 +107,13 @@ model Booking {
   endTime     String
   clientName  String
   clientPhone String
-  status      String
+  clientEmail String?
+  status      String // CONFIRMED, CANCELLED, PENDING
   metadata    Json?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+
   messageLogs MessageLog[]
 }
 
@@ -74,11 +121,24 @@ model Schedule {
   id         String @id @default(cuid())
   businessId String
   business   Business @relation(fields: [businessId], references: [id])
-  weekday    Int
-  openTime   String
-  closeTime  String
-  breakStart String?
-  breakEnd   String?
+  weekday    Int // 0=Sunday, 6=Saturday
+  
+  // Advanced intervals: [{start: "09:00", end: "12:00"}, {start: "13:00", end: "18:00"}]
+  intervals  Json @default("[]")
+  
+  isActive   Boolean @default(true)
+
+  @@unique([businessId, weekday])
+}
+
+model SpecialDay {
+  id         String @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id])
+  date       DateTime
+  isClosed   Boolean @default(false)
+  intervals  Json? // Override schedule for this day
+  reason     String?
 }
 
 model MessageLog {
@@ -88,4 +148,62 @@ model MessageLog {
   type        String
   status      String
   rawResponse Json?
+  createdAt   DateTime @default(now())
+}
+
+// --- LOGS ---
+
+model ActionLog {
+  id         String @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id])
+  userId     String?
+  user       User? @relation(fields: [userId], references: [id])
+  action     String // e.g. "UPDATE_SETTINGS", "CREATE_SERVICE"
+  entity     String // e.g. "Service", "Schedule"
+  entityId   String?
+  details    Json?
+  createdAt  DateTime @default(now())
+}
+
+model ErrorLog {
+  id         String @id @default(cuid())
+  businessId String?
+  business   Business? @relation(fields: [businessId], references: [id])
+  source     String // "CRON", "WHATSAPP", "SYSTEM"
+  error      String
+  stack      String?
+  createdAt  DateTime @default(now())
+}
+
+model SecurityLog {
+  id        String @id @default(cuid())
+  ip        String
+  endpoint  String
+  details   Json?
+  createdAt DateTime @default(now())
+}
+
+// --- BILLING ---
+
+model Plan {
+  id            String @id @default(cuid())
+  name          String
+  price         Float
+  currency      String @default("USD")
+  limits        Json // { maxStaff: 5, maxServices: 10, etc }
+  subscriptions Subscription[]
+}
+
+model Subscription {
+  id         String @id @default(cuid())
+  businessId String @unique
+  business   Business @relation(fields: [businessId], references: [id])
+  planId     String
+  plan       Plan @relation(fields: [planId], references: [id])
+  status     String // ACTIVE, CANCELLED, PAST_DUE
+  startDate  DateTime
+  endDate    DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt
 }

@@ -1,265 +1,321 @@
-# RESERVA PRO - Sistema de Reservas Multinegocio
+# 🎯 Reserva Pro - SaaS de Reservas Multi-Negocio
 
-Sistema SaaS completo de gestión de reservas con recordatorios automáticos vía WhatsApp.
+Sistema completo de gestión de reservas con recordatorios automáticos por WhatsApp, diseñado para múltiples negocios.
 
-## 🏗️ Arquitectura
+---
 
-El proyecto está dividido en 3 servicios independientes:
+## 🏗️ Arquitectura del Proyecto
 
-- **Backend** (NestJS + PostgreSQL + Prisma)
-- **Frontend** (Next.js 14 + TypeScript + TailwindCSS)
-- **Cron Job** (Node.js script para recordatorios)
-
-## 📋 Requisitos
-
-- Node.js 20+
-- PostgreSQL 14+
-- Cuenta de Railway
-- Meta WhatsApp Cloud API (opcional para producción)
-
-## 🚀 Deploy en Railway
-
-### 1. Crear Base de Datos PostgreSQL
-
-```bash
-# En Railway, crear un nuevo servicio PostgreSQL
-# Copiar la DATABASE_URL generada
+```
+SaaS-project/
+├── backend/          # NestJS + Prisma + PostgreSQL
+├── frontend/         # (Gestionado por Codex - NO MODIFICAR)
+├── cron/            # Trabajos programados
+└── docs/            # Documentación
 ```
 
-### 2. Deploy Backend
+---
 
-```bash
-cd backend
+## ✨ Características Principales
 
-# Configurar variables de entorno en Railway:
-DATABASE_URL=postgresql://...
-JWT_SECRET=tu_secret_super_seguro
-JWT_REFRESH_SECRET=tu_refresh_secret_super_seguro
-WHATSAPP_API_TOKEN=tu_token (opcional)
-WHATSAPP_PHONE_NUMBER_ID=tu_phone_id (opcional)
-PORT=3000
+### 🔐 Multi-Tenant
+- Sistema multi-negocio completo
+- Aislamiento de datos por negocio
+- Gestión de staff con roles y permisos
 
-# Railway detectará automáticamente el Dockerfile
-# El servicio se desplegará automáticamente
-```
+### 📅 Gestión Avanzada de Horarios
+- Múltiples intervalos por día
+- Días especiales y feriados
+- Bloqueo manual de slots
+- Soporte de timezone
 
-### 3. Deploy Frontend
+### 🤖 Automatización
+- Recordatorios automáticos por WhatsApp
+- Cron jobs robustos
+- Logging completo de errores
 
-```bash
-cd frontend
+### 📊 Analytics
+- Servicios más reservados
+- Tasa de cancelaciones
+- Estadísticas por período
+- Clientes recurrentes
 
-# Configurar variables de entorno en Railway:
-NEXT_PUBLIC_API_URL=https://tu-backend.railway.app
+### 💼 SaaS Features
+- Sistema de planes (Basic, Pro, Enterprise)
+- Límites configurables por plan
+- Preparado para integración con Stripe
 
-# Railway detectará automáticamente el Dockerfile
-```
+### 🎨 Branding
+- Logo personalizado por negocio
+- Colores de marca
+- Banner personalizable
 
-### 4. Deploy Cron Job
+### 📥 Exportación
+- Exportar reservas a CSV
+- Exportar clientes a CSV
+- Exportar servicios a CSV
 
-```bash
-cd cron
+### 🔒 Seguridad
+- Rate limiting global
+- Detección de patrones sospechosos
+- Logging de seguridad
+- JWT authentication
+- CORS configurado
 
-# Configurar variables de entorno en Railway:
-BACKEND_URL=https://tu-backend.railway.app
+---
 
-# Railway ejecutará este servicio cada 15 minutos según railway.json
-```
-
-## 💻 Desarrollo Local
+## 🚀 Quick Start
 
 ### Backend
 
 ```bash
 cd backend
 npm install
-
-# Configurar .env
-cp .env .env.local
-# Editar DATABASE_URL y demás variables
-
-# Generar Prisma Client
 npx prisma generate
-
-# Ejecutar migraciones
 npx prisma migrate dev
-
-# Iniciar servidor
+npm run seed
 npm run start:dev
 ```
 
-### Frontend
+El backend estará disponible en `http://localhost:3000`
+Swagger docs en `http://localhost:3000/docs`
 
-```bash
-cd frontend
-npm install
+### Variables de Entorno
 
-# Configurar .env.local
-echo "NEXT_PUBLIC_API_URL=http://localhost:3000" > .env.local
+Copiar `.env.example` a `.env` y configurar:
 
-# Iniciar servidor
-npm run dev
+```env
+DATABASE_URL="postgresql://user:password@localhost:5432/reserva_pro"
+JWT_ACCESS_SECRET="your-secret-here"
+JWT_REFRESH_SECRET="your-refresh-secret-here"
+FRONTEND_URL="http://localhost:4200"
 ```
 
-### Cron Job (Testing)
+---
 
-```bash
-cd cron
-npm install
+## 📚 Documentación
 
-# Configurar .env
-echo "BACKEND_URL=http://localhost:3000" > .env
+- **[API Reference](./backend/API_REFERENCE.md)** - Documentación completa de endpoints
+- **[Implementation Summary](./backend/IMPLEMENTATION_SUMMARY.md)** - Resumen de implementación
+- **[Deployment Guide](./DEPLOYMENT_GUIDE.md)** - Guía de despliegue en Railway
 
-# Ejecutar manualmente
-node index.js
+---
+
+## 🛠️ Stack Tecnológico
+
+### Backend
+- **NestJS** - Framework Node.js
+- **Prisma** - ORM
+- **PostgreSQL** - Base de datos
+- **JWT** - Autenticación
+- **Swagger** - Documentación API
+- **date-fns** - Manejo de fechas
+
+### Infraestructura
+- **Railway** - Hosting y deployment
+- **Docker** - Containerización
+
+---
+
+## 📋 Módulos Implementados
+
+### Core Modules
+- ✅ **Auth** - Autenticación y autorización
+- ✅ **User** - Gestión de usuarios
+- ✅ **Business** - Gestión de negocios
+- ✅ **Service** - Servicios ofrecidos
+- ✅ **Booking** - Reservas
+- ✅ **Schedule** - Horarios avanzados
+- ✅ **Staff** - Gestión de personal
+
+### Advanced Modules
+- ✅ **Availability** - Cálculo de disponibilidad
+- ✅ **Analytics** - Estadísticas y métricas
+- ✅ **Logs** - Auditoría y errores
+- ✅ **Export** - Exportación de datos
+- ✅ **Billing** - Planes y suscripciones
+- ✅ **WhatsApp** - Integración con WhatsApp
+- ✅ **Cron** - Trabajos programados
+
+---
+
+## 🔄 Flujo de Trabajo
+
+### 1. Registro de Negocio
+```
+Usuario → Registro → Crear Negocio → Configurar Horarios → Agregar Servicios
 ```
 
-## 📚 Endpoints Principales
+### 2. Gestión de Staff
+```
+Owner → Invitar Staff → Staff acepta → Asignar permisos
+```
 
-### Auth
+### 3. Reserva
+```
+Cliente → Selecciona servicio → Ve disponibilidad → Reserva → Confirmación WhatsApp
+```
 
-- `POST /auth/register` - Registro de usuario
+### 4. Recordatorio
+```
+Cron (cada minuto) → Busca reservas próximas → Envía WhatsApp → Log resultado
+```
+
+---
+
+## 🎯 Endpoints Principales
+
+### Autenticación
+- `POST /auth/register` - Registro
 - `POST /auth/login` - Login
 - `POST /auth/refresh` - Refresh token
-- `POST /auth/forgot-password` - Recuperar contraseña
-- `POST /auth/reset-password` - Resetear contraseña
 
-### Business
-
+### Negocios
 - `POST /business` - Crear negocio
 - `GET /business` - Listar mis negocios
-- `GET /business/:id` - Obtener negocio
 - `PATCH /business/:id` - Actualizar negocio
-- `GET /business/:slug/public` - Vista pública
 
-### Services
+### Staff
+- `POST /business/:id/staff` - Crear staff
+- `POST /staff/accept-invite` - Aceptar invitación
 
-- `POST /services` - Crear servicio
-- `GET /services/:businessId` - Listar servicios
-- `PATCH /services/:id` - Actualizar servicio
-- `DELETE /services/:id` - Eliminar servicio
+### Reservas
+- `POST /booking` - Crear reserva
+- `GET /booking/:businessId` - Listar reservas
 
-### Bookings
+### Disponibilidad
+- `GET /availability/:businessId?serviceId=xxx&date=2025-12-01`
 
-- `POST /bookings` - Crear reserva
-- `GET /bookings/:businessId` - Listar reservas
-- `GET /bookings/:businessId/availability` - Obtener disponibilidad
-- `PATCH /bookings/:id/cancel` - Cancelar reserva
-- `PATCH /bookings/:id/reschedule` - Reagendar reserva
+### Analytics
+- `GET /analytics/:businessId` - Estadísticas
 
-### Schedule
+### Export
+- `GET /export/reservations/:businessId` - CSV de reservas
 
-- `POST /schedule` - Crear horario
-- `GET /schedule/:businessId` - Listar horarios
-- `PATCH /schedule/:id` - Actualizar horario
-- `DELETE /schedule/:id` - Eliminar horario
+Ver [API_REFERENCE.md](./backend/API_REFERENCE.md) para documentación completa.
 
-### WhatsApp
-
-- `POST /whatsapp/send-confirmation/:bookingId` - Enviar confirmación
-- `POST /whatsapp/send-reminder/:bookingId` - Enviar recordatorio
-- `POST /whatsapp/send-cancellation/:bookingId` - Enviar cancelación
-- `GET /whatsapp/logs/:bookingId` - Ver logs de mensajes
-
-### Cron
-
-- `POST /cron/send-reminders` - Ejecutar envío de recordatorios
-
-## 🔧 Configuración WhatsApp Cloud API
-
-1. Crear una app en Meta for Developers
-2. Configurar WhatsApp Business API
-3. Obtener el token de acceso permanente
-4. Obtener el Phone Number ID
-5. Configurar las variables de entorno en el backend
-
-## 📝 Modelo de Datos
-
-Ver `backend/prisma/schema.prisma` para el esquema completo.
-
-Entidades principales:
-
-- **User**: Usuarios del sistema
-- **Business**: Negocios (multinegocio)
-- **Service**: Servicios ofrecidos
-- **Booking**: Reservas
-- **Schedule**: Horarios de atención
-- **MessageLog**: Logs de mensajes WhatsApp
-
-## 🎨 Frontend
-
-El frontend incluye:
-
-- ✅ Autenticación completa (login/register)
-- ✅ Dashboard de negocios
-- ✅ Gestión de servicios
-- ✅ Gestión de horarios
-- ✅ Gestión de reservas
-- ✅ Vista pública por slug
-- ✅ Diseño responsive con TailwindCSS
-- ✅ Interceptores de API con refresh token automático
+---
 
 ## 🔐 Seguridad
 
-- JWT con refresh tokens
-- Validación de datos con class-validator
-- CORS configurado
-- Passwords hasheados con bcrypt
-- Guards de autenticación en rutas protegidas
+- **Rate Limiting**: 100 requests por 15 minutos
+- **Input Validation**: Validación automática con class-validator
+- **SQL Injection**: Protección vía Prisma ORM
+- **XSS**: Sanitización de inputs
+- **CORS**: Configurado para frontend específico
+- **JWT**: Tokens con expiración
+- **Password Hashing**: Bcrypt con salt
 
-## 📦 Estructura del Proyecto
+---
 
+## 📊 Base de Datos
+
+### Modelos Principales
+- User
+- Business
+- Staff
+- Service
+- Booking
+- Schedule
+- SpecialDay
+- Plan
+- Subscription
+- ActionLog
+- ErrorLog
+- SecurityLog
+
+Ver [schema.prisma](./backend/prisma/schema.prisma) para detalles.
+
+---
+
+## 🚀 Deployment
+
+### Railway (Recomendado)
+
+1. Conectar repositorio GitHub
+2. Crear servicio PostgreSQL
+3. Configurar variables de entorno
+4. Deploy automático
+
+Ver [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) para instrucciones detalladas.
+
+---
+
+## 🧪 Testing
+
+```bash
+# Unit tests
+npm run test
+
+# E2E tests
+npm run test:e2e
+
+# Coverage
+npm run test:cov
 ```
-entropic-apollo/
-├── backend/
-│   ├── src/
-│   │   ├── auth/
-│   │   ├── business/
-│   │   ├── booking/
-│   │   ├── service/
-│   │   ├── schedule/
-│   │   ├── whatsapp/
-│   │   ├── cron/
-│   │   ├── public/
-│   │   └── prisma/
-│   ├── prisma/
-│   ├── Dockerfile
-│   └── railway.json
-├── frontend/
-│   ├── src/
-│   │   ├── app/
-│   │   ├── components/
-│   │   ├── contexts/
-│   │   └── lib/
-│   ├── Dockerfile
-│   └── railway.json
-└── cron/
-    ├── index.js
-    ├── Dockerfile
-    └── railway.json
-```
 
-## 🐛 Troubleshooting
+---
 
-### Error de conexión a base de datos
+## 📝 Convenciones de Código
 
-- Verificar que DATABASE_URL esté correctamente configurada
-- Asegurarse de que las migraciones se ejecutaron
+- **Idioma**: Código en inglés, comentarios en español
+- **Formato**: Prettier + ESLint
+- **Commits**: Conventional Commits
+- **Branches**: feature/, bugfix/, hotfix/
 
-### Error de CORS
+---
 
-- Verificar que FRONTEND_URL esté configurada en el backend
-- Revisar la configuración de CORS en main.ts
+## 🤝 Contribución
 
-### Cron job no ejecuta
+### Reglas Importantes
 
-- Verificar que BACKEND_URL esté correctamente configurada
-- Revisar logs en Railway
-- Verificar que el endpoint /cron/send-reminders sea accesible
+⚠️ **NO MODIFICAR** el directorio `/frontend` - Gestionado por Codex
+
+Para contribuir al backend:
+1. Fork del repositorio
+2. Crear branch feature
+3. Commit con mensaje descriptivo
+4. Push y crear PR
+
+---
+
+## 📞 Soporte
+
+Para problemas o preguntas:
+1. Revisar documentación en `/backend/API_REFERENCE.md`
+2. Revisar logs en Railway
+3. Crear issue en GitHub
+
+---
 
 ## 📄 Licencia
 
-MIT
+Propietario: Reserva Pro
+Todos los derechos reservados.
 
-## 👨‍💻 Autor
+---
 
-Desarrollado como proyecto SaaS completo end-to-end.
+## 🎉 Estado del Proyecto
+
+**Backend**: ✅ Completo y en producción
+**Frontend**: 🔄 En desarrollo (Codex)
+**Deployment**: ✅ Listo para Railway
+
+---
+
+## 🔮 Roadmap
+
+### Próximas Características
+- [ ] Integración completa con Stripe
+- [ ] Sistema de notificaciones por email
+- [ ] Dashboard de métricas en tiempo real
+- [ ] App móvil (React Native)
+- [ ] Integración con Google Calendar
+- [ ] Sistema de reviews y ratings
+- [ ] Multi-idioma
+- [ ] Dark mode
+
+---
+
+**Última actualización**: Noviembre 2025
+**Versión**: 1.0.0

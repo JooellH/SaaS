@@ -1,4 +1,4 @@
-import { Controller, Post } from '@nestjs/common';
+import { Controller, Post, Get } from '@nestjs/common';
 import { CronService } from './cron.service';
 
 @Controller('cron')
@@ -9,4 +9,10 @@ export class CronController {
   sendReminders() {
     return this.cronService.sendUpcomingReminders();
   }
+
+  @Get('logs')
+  getLogs() {
+    return this.cronService.getLogs();
+  }
 }
+

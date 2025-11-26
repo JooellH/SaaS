@@ -1,8 +1,15 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import api from "@/lib/api";
 import { scheduleSchema } from "@/lib/validations";
+import { motion } from "framer-motion";
+import { Trash2, Plus } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { Select } from "@/components/ui/Select";
+import { Card } from "@/components/ui/Card";
+import { FormFeedback } from "@/components/ui/FormFeedback";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 interface Business {
   id: string;
@@ -18,7 +25,7 @@ interface ScheduleRow {
   breakEnd?: string | null;
 }
 
-const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const weekdays = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
 const emptySchedule = {
   weekday: 1,
@@ -28,12 +35,19 @@ const emptySchedule = {
   breakEnd: "",
 };
 
+const fadeUp = {
+  hidden: { opacity: 0, y: 8 },
+  show: { opacity: 1, y: 0 },
+};
+
 export default function SchedulePage() {
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [selectedBusinessId, setSelectedBusinessId] = useState<string>("");
   const [schedule, setSchedule] = useState<ScheduleRow[]>([]);
   const [form, setForm] = useState(emptySchedule);
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [loadingSchedule, setLoadingSchedule] = useState(false);
 
   useEffect(() => {
     const loadBusinesses = async () => {
@@ -44,7 +58,7 @@ export default function SchedulePage() {
           setSelectedBusinessId(res.data[0].id);
         }
       } catch {
-        setError("Unable to load businesses");
+        setError("No se pudieron cargar los negocios");
       }
     };
     loadBusinesses();
@@ -53,11 +67,16 @@ export default function SchedulePage() {
   useEffect(() => {
     if (!selectedBusinessId) return;
     const loadSchedule = async () => {
+      setLoadingSchedule(true);
       try {
-        const res = await api.get(`/schedule/${selectedBusinessId}`);
+        const res = await api.get(
+          `/business/${selectedBusinessId}/schedule`,
+        );
         setSchedule(res.data);
       } catch {
-        setError("Unable to load schedule");
+        setError("No se pudo cargar la agenda");
+      } finally {
+        setLoadingSchedule(false);
       }
     };
     loadSchedule();
@@ -66,6 +85,7 @@ export default function SchedulePage() {
   const submitSchedule = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
+    setSaving(true);
     const parsed = scheduleSchema.safeParse({
       ...form,
       businessId: selectedBusinessId,
@@ -73,33 +93,50 @@ export default function SchedulePage() {
       breakEnd: form.breakEnd || undefined,
     });
     if (!parsed.success) {
-      setError("Check schedule values.");
+      setError("Revisa los valores del horario.");
+      setSaving(false);
       return;
     }
     try {
-      await api.post("/schedule", parsed.data);
-      const res = await api.get(`/schedule/${selectedBusinessId}`);
+      await api.post(`/business/${selectedBusinessId}/schedule`, parsed.data);
+      const res = await api.get(
+        `/business/${selectedBusinessId}/schedule`,
+      );
       setSchedule(res.data);
+      setForm(emptySchedule);
     } catch {
-      setError("Unable to save schedule");
+      setError("No se pudo guardar el horario");
+    } finally {
+      setSaving(false);
     }
   };
 
   const deleteRow = async (id: string) => {
-    await api.delete(`/schedule/${id}`);
+    await api.delete(`/business/${selectedBusinessId}/schedule/${id}`);
     setSchedule((prev) => prev.filter((row) => row.id !== id));
   };
 
+  const sortedSchedule = useMemo(
+    () => [...schedule].sort((a, b) => a.weekday - b.weekday),
+    [schedule],
+  );
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-gray-900">Schedule</h1>
-        <div className="flex gap-3 items-center">
-          <label className="text-sm text-gray-700">Business</label>
+    <div className="space-y-8">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="space-y-1">
+          <p className="text-sm text-slate-400">Operación</p>
+          <h1 className="text-3xl font-semibold text-white">Horarios</h1>
+          <p className="text-slate-400">
+            Define disponibilidad y pausas para cada día.
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <label className="text-sm text-slate-200/80">Negocio</label>
           <select
             value={selectedBusinessId}
             onChange={(e) => setSelectedBusinessId(e.target.value)}
-            className="input-field"
+            className="input-field w-56"
           >
             {businesses.map((b) => (
               <option key={b.id} value={b.id}>
@@ -110,92 +147,126 @@ export default function SchedulePage() {
         </div>
       </div>
 
-      {error && <div className="text-red-600 text-sm">{error}</div>}
+      {error && <FormFeedback variant="error" message={error} />}
 
-      <form onSubmit={submitSchedule} className="card grid grid-cols-1 md:grid-cols-6 gap-3">
-        <div>
-          <label className="block text-sm text-gray-700 mb-1">Weekday</label>
-          <select
-            value={form.weekday}
-            onChange={(e) => setForm({ ...form, weekday: Number(e.target.value) })}
-            className="input-field"
-          >
-            {weekdays.map((day, idx) => (
-              <option key={day} value={idx}>
-                {idx} - {day}
-              </option>
-            ))}
-          </select>
+      <Card className="space-y-4">
+        <div className="flex items-center gap-3">
+          <span className="chip">Agregar horario</span>
+          <p className="text-sm text-slate-300">
+            Configura apertura, cierre y pausas opcionales.
+          </p>
         </div>
-        <div>
-          <label className="block text-sm text-gray-700 mb-1">Open</label>
-          <input
-            type="time"
-            value={form.openTime}
-            onChange={(e) => setForm({ ...form, openTime: e.target.value })}
-            className="input-field"
-          />
-        </div>
-        <div>
-          <label className="block text-sm text-gray-700 mb-1">Close</label>
-          <input
-            type="time"
-            value={form.closeTime}
-            onChange={(e) => setForm({ ...form, closeTime: e.target.value })}
-            className="input-field"
-          />
-        </div>
-        <div>
-          <label className="block text-sm text-gray-700 mb-1">Break start</label>
-          <input
-            type="time"
-            value={form.breakStart}
-            onChange={(e) => setForm({ ...form, breakStart: e.target.value })}
-            className="input-field"
-          />
-        </div>
-        <div>
-          <label className="block text-sm text-gray-700 mb-1">Break end</label>
-          <input
-            type="time"
-            value={form.breakEnd}
-            onChange={(e) => setForm({ ...form, breakEnd: e.target.value })}
-            className="input-field"
-          />
-        </div>
-        <div className="flex items-end">
-          <button type="submit" className="btn-primary w-full">
-            Add
-          </button>
-        </div>
-      </form>
+        <form
+          onSubmit={submitSchedule}
+          className="grid grid-cols-1 md:grid-cols-6 gap-3"
+        >
+          <div>
+            <label className="block text-sm text-slate-200 mb-1">Día</label>
+            <Select
+              aria-label="Seleccionar día"
+              value={form.weekday}
+              onChange={(e) =>
+                setForm({ ...form, weekday: Number(e.target.value) })
+              }
+            >
+              {weekdays.map((day, idx) => (
+                <option key={day} value={idx}>
+                  {idx} - {day}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div>
+            <label className="block text-sm text-slate-200 mb-1">Apertura</label>
+            <input
+              type="time"
+              value={form.openTime}
+              onChange={(e) => setForm({ ...form, openTime: e.target.value })}
+              className="input-field"
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-slate-200 mb-1">Cierre</label>
+            <input
+              type="time"
+              value={form.closeTime}
+              onChange={(e) => setForm({ ...form, closeTime: e.target.value })}
+              className="input-field"
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-slate-200 mb-1">Pausa inicio</label>
+            <input
+              type="time"
+              value={form.breakStart}
+              onChange={(e) => setForm({ ...form, breakStart: e.target.value })}
+              className="input-field"
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-slate-200 mb-1">Pausa fin</label>
+            <input
+              type="time"
+              value={form.breakEnd}
+              onChange={(e) => setForm({ ...form, breakEnd: e.target.value })}
+              className="input-field"
+            />
+          </div>
+          <div className="flex items-end">
+            <Button type="submit" className="w-full" disabled={saving}>
+              <Plus className="w-4 h-4" />
+              {saving ? "Guardando" : "Guardar"}
+            </Button>
+          </div>
+        </form>
+      </Card>
 
-      <div className="space-y-3">
-        {schedule.length === 0 ? (
-          <div className="text-sm text-gray-600">No schedule rows yet.</div>
+      <motion.div
+        initial="hidden"
+        animate="show"
+        variants={{ show: { transition: { staggerChildren: 0.04 } } }}
+        className="space-y-3"
+      >
+        {loadingSchedule ? (
+          [...Array(4)].map((_, i) => (
+            <Card key={i} className="space-y-2">
+              <Skeleton className="h-5 w-1/2" />
+              <Skeleton className="h-4 w-1/3" />
+            </Card>
+          ))
+        ) : sortedSchedule.length === 0 ? (
+          <Card className="text-sm text-slate-300">
+            No hay horarios configurados.
+          </Card>
         ) : (
-          schedule.map((row) => (
-            <div
+          sortedSchedule.map((row) => (
+            <motion.div
               key={row.id}
+              variants={fadeUp}
               className="card flex items-center justify-between gap-3"
             >
-              <div>
-                <div className="font-semibold text-gray-900">
+              <div className="space-y-1">
+                <div className="text-lg font-semibold text-white">
                   {weekdays[row.weekday]} · {row.openTime} - {row.closeTime}
                 </div>
                 {row.breakStart && row.breakEnd && (
-                  <div className="text-sm text-gray-700">
-                    Break: {row.breakStart} - {row.breakEnd}
+                  <div className="text-sm text-slate-300">
+                    Pausa: {row.breakStart} - {row.breakEnd}
                   </div>
                 )}
               </div>
-              <button className="btn-secondary" onClick={() => deleteRow(row.id)}>
-                Delete
-              </button>
-            </div>
+              <Button
+                variant="secondary"
+                className="text-red-200 hover:text-white"
+                onClick={() => deleteRow(row.id)}
+              >
+                <Trash2 className="w-4 h-4" />
+                Eliminar
+              </Button>
+            </motion.div>
           ))
         )}
-      </div>
+      </motion.div>
     </div>
   );
 }

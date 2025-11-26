@@ -1,36 +1,25 @@
-import {
-  IsInt,
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-  Max,
-  Min,
-} from 'class-validator';
+import { IsBoolean, IsInt, IsNotEmpty, IsArray, ValidateNested, IsOptional } from 'class-validator';
+import { Type } from 'class-transformer';
+
+class IntervalDto {
+  @IsNotEmpty()
+  start: string;
+
+  @IsNotEmpty()
+  end: string;
+}
 
 export class CreateScheduleDto {
   @IsNotEmpty()
-  @IsString()
-  businessId: string;
-
-  @IsNotEmpty()
   @IsInt()
-  @Min(0)
-  @Max(6)
   weekday: number;
 
-  @IsNotEmpty()
-  @IsString()
-  openTime: string;
-
-  @IsNotEmpty()
-  @IsString()
-  closeTime: string;
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => IntervalDto)
+  intervals: IntervalDto[];
 
   @IsOptional()
-  @IsString()
-  breakStart?: string;
-
-  @IsOptional()
-  @IsString()
-  breakEnd?: string;
+  @IsBoolean()
+  isActive?: boolean;
 }

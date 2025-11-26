@@ -8,6 +8,11 @@ import { CreateBookingDto } from './dto/create-booking.dto';
 import { RescheduleBookingDto } from './dto/reschedule-booking.dto';
 import { addMinutes, parse, format } from 'date-fns';
 
+type TimeInterval = {
+  start: string;
+  end: string;
+};
+
 @Injectable()
 export class BookingService {
   constructor(private prisma: PrismaService) {}
@@ -131,33 +136,26 @@ export class BookingService {
       where: {
         businessId,
         weekday,
+        isActive: true,
       },
     });
 
     if (!schedule) return false;
 
-    // Check if time is within business hours
+    const intervals = this.parseIntervals(schedule.intervals);
+    if (intervals.length === 0) return false;
+
     const startMinutes = this.timeToMinutes(startTime);
     const endMinutes = startMinutes + durationMinutes;
-    const openMinutes = this.timeToMinutes(schedule.openTime);
-    const closeMinutes = this.timeToMinutes(schedule.closeTime);
 
-    if (startMinutes < openMinutes || endMinutes > closeMinutes) {
+    const fitsSchedule = intervals.some(({ start, end }) => {
+      const intervalStart = this.timeToMinutes(start);
+      const intervalEnd = this.timeToMinutes(end);
+      return startMinutes >= intervalStart && endMinutes <= intervalEnd;
+    });
+
+    if (!fitsSchedule) {
       return false;
-    }
-
-    // Check break time
-    if (schedule.breakStart && schedule.breakEnd) {
-      const breakStartMinutes = this.timeToMinutes(schedule.breakStart);
-      const breakEndMinutes = this.timeToMinutes(schedule.breakEnd);
-
-      if (
-        (startMinutes >= breakStartMinutes && startMinutes < breakEndMinutes) ||
-        (endMinutes > breakStartMinutes && endMinutes <= breakEndMinutes) ||
-        (startMinutes <= breakStartMinutes && endMinutes >= breakEndMinutes)
-      ) {
-        return false;
-      }
     }
 
     // Check existing bookings
@@ -201,31 +199,37 @@ export class BookingService {
     const weekday = dateObj.getDay();
 
     const schedule = await this.prisma.schedule.findFirst({
-      where: { businessId, weekday },
+      where: { businessId, weekday, isActive: true },
     });
 
     if (!schedule) return [];
 
+    const intervals = this.parseIntervals(schedule.intervals);
+    if (intervals.length === 0) return [];
+
     const slots: string[] = [];
     const totalDuration = service.durationMinutes + service.cleaningTimeMinutes;
-    const openMinutes = this.timeToMinutes(schedule.openTime);
-    const closeMinutes = this.timeToMinutes(schedule.closeTime);
 
-    for (
-      let time = openMinutes;
-      time + service.durationMinutes <= closeMinutes;
-      time += 30
-    ) {
-      const timeStr = this.minutesToTime(time);
-      const isAvailable = await this.checkAvailability(
-        businessId,
-        date,
-        timeStr,
-        totalDuration,
-      );
+    for (const interval of intervals) {
+      const intervalStart = this.timeToMinutes(interval.start);
+      const intervalEnd = this.timeToMinutes(interval.end);
 
-      if (isAvailable) {
-        slots.push(timeStr);
+      for (
+        let time = intervalStart;
+        time + totalDuration <= intervalEnd;
+        time += 30
+      ) {
+        const timeStr = this.minutesToTime(time);
+        const isAvailable = await this.checkAvailability(
+          businessId,
+          date,
+          timeStr,
+          totalDuration,
+        );
+
+        if (isAvailable) {
+          slots.push(timeStr);
+        }
       }
     }
 
@@ -241,6 +245,29 @@ export class BookingService {
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
     return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+  }
+
+  private parseIntervals(intervals: unknown): TimeInterval[] {
+    if (!Array.isArray(intervals)) return [];
+
+    return intervals
+      .map((interval) => {
+        if (
+          interval &&
+          typeof interval === 'object' &&
+          'start' in interval &&
+          'end' in interval &&
+          typeof (interval as { start?: unknown }).start === 'string' &&
+          typeof (interval as { end?: unknown }).end === 'string'
+        ) {
+          return {
+            start: (interval as { start: string }).start,
+            end: (interval as { end: string }).end,
+          };
+        }
+        return null;
+      })
+      .filter((i): i is TimeInterval => Boolean(i));
   }
 
   async findUpcomingReminders(minutesAhead: number) {

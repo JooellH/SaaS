@@ -1,6 +1,11 @@
 import axios from "axios";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+// Ensure every request hits the Nest global prefix /api.
+const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+const normalizedBase = rawApiUrl.replace(/\/$/, "");
+const API_URL = normalizedBase.endsWith("/api")
+  ? normalizedBase
+  : `${normalizedBase}/api`;
 
 export const api = axios.create({
   baseURL: API_URL,

@@ -1,7 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import api from "@/lib/api";
+import { motion } from "framer-motion";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Select } from "@/components/ui/Select";
+import { Badge } from "@/components/ui/Badge";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 interface Business {
   id: string;
@@ -17,6 +23,11 @@ interface Booking {
   status: string;
   service?: { name: string };
 }
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 10 },
+  show: { opacity: 1, y: 0 },
+};
 
 export default function BookingsPage() {
   const [businesses, setBusinesses] = useState<Business[]>([]);
@@ -34,7 +45,7 @@ export default function BookingsPage() {
           setSelectedBusinessId(res.data[0].id);
         }
       } catch (e) {
-        setError("Unable to load businesses");
+        setError("No se pudieron cargar los negocios");
       }
     };
     loadBusinesses();
@@ -49,7 +60,7 @@ export default function BookingsPage() {
         const res = await api.get(`/bookings/${selectedBusinessId}`);
         setBookings(res.data);
       } catch (e) {
-        setError("Unable to load bookings");
+        setError("No se pudieron cargar las reservas");
       } finally {
         setLoading(false);
       }
@@ -60,66 +71,120 @@ export default function BookingsPage() {
   const cancelBooking = async (id: string) => {
     await api.patch(`/bookings/${id}/cancel`);
     setBookings((prev) =>
-      prev.map((b) => (b.id === id ? { ...b, status: "cancelled" } : b))
+      prev.map((b) => (b.id === id ? { ...b, status: "cancelled" } : b)),
     );
   };
 
+  const statusBadge = (status: string) => {
+    const map: Record<string, string> = {
+      confirmed: "text-green-200 bg-green-500/15 border-green-300/30",
+      pending: "text-amber-200 bg-amber-500/15 border-amber-300/30",
+      cancelled: "text-red-200 bg-red-500/15 border-red-300/30",
+    };
+    return map[status] || "text-slate-200 bg-white/10 border-white/15";
+  };
+
+  const sortedBookings = useMemo(
+    () =>
+      [...bookings].sort(
+        (a, b) =>
+          new Date(b.date).getTime() - new Date(a.date).getTime() ||
+          a.startTime.localeCompare(b.startTime),
+      ),
+    [bookings],
+  );
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-gray-900">Bookings</h1>
-        <div className="flex gap-3 items-center">
-          <label className="text-sm text-gray-700">Business</label>
-          <select
+    <div className="space-y-8">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="space-y-1">
+          <p className="text-sm text-slate-400">Panel</p>
+          <h1 className="text-3xl font-semibold text-white">Reservas</h1>
+          <p className="text-slate-400">
+            Revisa y gestiona las reservas de tus negocios en un solo lugar.
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <label className="text-sm text-slate-200/80">Negocio</label>
+          <Select
+            aria-label="Selecciona un negocio"
             value={selectedBusinessId}
             onChange={(e) => setSelectedBusinessId(e.target.value)}
-            className="input-field"
+            className="w-56"
           >
             {businesses.map((b) => (
               <option key={b.id} value={b.id}>
                 {b.name}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       </div>
 
-      {error && <div className="text-red-600 text-sm">{error}</div>}
+      {error && (
+        <div className="text-red-200 text-sm rounded-2xl border border-red-400/30 bg-red-500/10 px-3 py-2">
+          {error}
+        </div>
+      )}
 
       {loading ? (
-        <div className="text-sm text-gray-600">Loading bookings...</div>
-      ) : bookings.length === 0 ? (
-        <div className="text-sm text-gray-600">No bookings found.</div>
+        <Card className="space-y-3">
+          {[...Array(3)].map((_, i) => (
+            <Skeleton key={i} className="h-14 w-full" />
+          ))}
+        </Card>
+      ) : sortedBookings.length === 0 ? (
+        <div className="card text-sm text-slate-300">No hay reservas.</div>
       ) : (
-        <div className="space-y-3">
-          {bookings.map((booking) => (
-            <div
+        <motion.div
+          initial="hidden"
+          animate="show"
+          variants={{ show: { transition: { staggerChildren: 0.04 } } }}
+          className="space-y-3"
+        >
+          {sortedBookings.map((booking) => (
+            <motion.div
               key={booking.id}
+              variants={fadeUp}
               className="card flex flex-col md:flex-row md:items-center md:justify-between gap-3"
             >
-              <div>
-                <div className="font-semibold text-gray-900">
-                  {booking.clientName} ({booking.clientPhone})
+              <div className="space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-base font-semibold text-white">
+                    {booking.clientName}
+                  </span>
+                  <Badge className="border-white/10 bg-white/10 text-slate-100">
+                    {booking.clientPhone}
+                  </Badge>
+                  <Badge
+                    className={`border ${statusBadge(booking.status)}`}
+                  >
+                    {booking.status}
+                  </Badge>
                 </div>
-                <div className="text-sm text-gray-700">
-                  {new Date(booking.date).toLocaleDateString()} at{" "}
-                  {booking.startTime} · {booking.service?.name || "Service"}
-                </div>
-                <div className="text-xs uppercase text-gray-500">
-                  Status: {booking.status}
+                <div className="text-sm text-slate-200">
+                  {new Date(booking.date).toLocaleDateString("es-ES", {
+                    weekday: "short",
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric",
+                  })}{" "}
+                  · {booking.startTime} · {booking.service?.name || "Servicio"}
                 </div>
               </div>
               {booking.status !== "cancelled" && (
-                <button
+                <Button
                   onClick={() => cancelBooking(booking.id)}
-                  className="btn-secondary self-start md:self-auto"
+                  variant="secondary"
+                  className="self-start md:self-auto"
+                  aria-label="Cancelar reserva"
                 >
-                  Cancel booking
-                </button>
+                  Cancelar
+                </Button>
               )}
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       )}
     </div>
   );

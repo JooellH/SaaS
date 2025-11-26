@@ -42,7 +42,7 @@ export class BusinessService {
   async findBySlug(slug: string) {
     const business = await this.prisma.business.findUnique({
       where: { slug },
-      include: { services: true, schedule: true },
+      include: { services: true, schedules: true },
     });
     if (!business) throw new NotFoundException('Business not found');
     return business;

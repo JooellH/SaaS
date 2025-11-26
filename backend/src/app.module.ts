@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -12,6 +12,14 @@ import { ScheduleModule } from './schedule/schedule.module';
 import { WhatsappModule } from './whatsapp/whatsapp.module';
 import { CronModule } from './cron/cron.module';
 import { PublicModule } from './public/public.module';
+import { StaffModule } from './staff/staff.module';
+import { LogsModule } from './logs/logs.module';
+import { AvailabilityModule } from './availability/availability.module';
+import { ExportModule } from './export/export.module';
+import { AnalyticsModule } from './analytics/analytics.module';
+import { BillingModule } from './billing/billing.module';
+import { RateLimitMiddleware } from './common/middleware/rate-limit.middleware';
+import { SecurityMiddleware } from './common/middleware/security.middleware';
 
 @Module({
   imports: [
@@ -29,8 +37,22 @@ import { PublicModule } from './public/public.module';
     WhatsappModule,
     CronModule,
     PublicModule,
+    StaffModule,
+    LogsModule,
+    AvailabilityModule,
+    ExportModule,
+    AnalyticsModule,
+    BillingModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(RateLimitMiddleware, SecurityMiddleware)
+      .forRoutes('*');
+  }
+}
+
+

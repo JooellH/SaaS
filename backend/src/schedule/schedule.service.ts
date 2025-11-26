@@ -7,9 +7,27 @@ import { UpdateScheduleDto } from './dto/update-schedule.dto';
 export class ScheduleService {
   constructor(private prisma: PrismaService) {}
 
-  async create(dto: CreateScheduleDto) {
+  async create(businessId: string, createScheduleDto: CreateScheduleDto) {
+    // Check if schedule for weekday exists
+    const existing = await this.prisma.schedule.findUnique({
+      where: {
+        businessId_weekday: {
+          businessId,
+          weekday: createScheduleDto.weekday,
+        },
+      },
+    });
+
+    if (existing) {
+      return this.update(existing.id, createScheduleDto);
+    }
+
     return this.prisma.schedule.create({
-      data: dto,
+      data: {
+        ...createScheduleDto,
+        businessId,
+        intervals: createScheduleDto.intervals as any,
+      },
     });
   }
 
@@ -28,16 +46,39 @@ export class ScheduleService {
     return schedule;
   }
 
-  async update(id: string, dto: UpdateScheduleDto) {
+  async update(id: string, updateScheduleDto: UpdateScheduleDto) {
     return this.prisma.schedule.update({
       where: { id },
-      data: dto,
+      data: {
+        ...updateScheduleDto,
+        intervals: updateScheduleDto.intervals as any,
+      },
     });
   }
 
   async remove(id: string) {
     return this.prisma.schedule.delete({
       where: { id },
+    });
+  }
+
+  // Special Days
+  async addSpecialDay(businessId: string, date: Date, isClosed: boolean, intervals?: any, reason?: string) {
+    return this.prisma.specialDay.create({
+      data: {
+        businessId,
+        date,
+        isClosed,
+        intervals: intervals || [],
+        reason,
+      },
+    });
+  }
+
+  async getSpecialDays(businessId: string) {
+    return this.prisma.specialDay.findMany({
+      where: { businessId },
+      orderBy: { date: 'asc' },
     });
   }
 }

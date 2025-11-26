@@ -4,12 +4,20 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
+import { motion } from "framer-motion";
+import { Mail, Lock, Eye, EyeOff, Sparkles } from "lucide-react";
+
+const cardVariants = {
+  hidden: { opacity: 0, y: 16, scale: 0.98 },
+  show: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.35, ease: [0.16, 1, 0.3, 1] } },
+};
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
   const { login } = useAuth();
 
@@ -29,78 +37,106 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 via-white to-primary-100 px-4">
-      <div className="max-w-md w-full">
-        <div className="text-center mb-8 animate-fade-in">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Reserva Pro</h1>
-          <p className="text-gray-600">Inicia sesión en tu cuenta</p>
-        </div>
+    <div className="relative min-h-screen overflow-hidden">
+      <div className="absolute inset-0 -z-10 opacity-80">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(124,58,237,0.16),transparent_26%),radial-gradient(circle_at_80%_0%,rgba(34,211,238,0.14),transparent_30%),radial-gradient(circle_at_50%_80%,rgba(59,130,246,0.16),transparent_28%)]" />
+      </div>
+      <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/40 to-transparent pointer-events-none" />
 
-        <div className="card animate-slide-up">
-          <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <motion.div
+          initial="hidden"
+          animate="show"
+          variants={cardVariants}
+          className="w-full max-w-md rounded-3xl border border-white/10 bg-white/5 p-8 shadow-2xl shadow-indigo-900/30 backdrop-blur-lg space-y-8"
+        >
+          <div className="text-center space-y-3">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-semibold text-indigo-200">
+              <Sparkles className="w-4 h-4" />
+              <span>Reserva Pro</span>
+            </div>
+            <h1 className="text-3xl font-bold text-white">Bienvenido de nuevo</h1>
+            <p className="text-sm text-slate-300">
+              Inicia sesión para gestionar tus negocios y reservas.
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+              <div className="rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
                 {error}
               </div>
             )}
 
-            <div>
+            <div className="space-y-2">
               <label
                 htmlFor="email"
-                className="block text-sm font-medium text-gray-700 mb-2"
+                className="block text-sm font-medium text-slate-200"
               >
                 Email
               </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="input-field"
-                placeholder="tu@email.com"
-                required
-              />
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="input-field pl-11"
+                  placeholder="tu@email.com"
+                  required
+                />
+              </div>
             </div>
 
-            <div>
+            <div className="space-y-2">
               <label
                 htmlFor="password"
-                className="block text-sm font-medium text-gray-700 mb-2"
+                className="block text-sm font-medium text-slate-200"
               >
                 Contraseña
               </label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="input-field"
-                placeholder="••••••••"
-                required
-              />
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                <input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="input-field pl-11 pr-11"
+                  placeholder="••••••••"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((p) => !p)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hover:text-white transition"
+                  aria-label="Mostrar contraseña"
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn-primary w-full disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              {loading ? "Iniciando sesión..." : "Iniciar Sesión"}
+              {loading ? "Iniciando..." : "Iniciar Sesión"}
             </button>
           </form>
 
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
-              ¿No tienes cuenta?{" "}
-              <Link
-                href="/register"
-                className="text-primary-600 hover:text-primary-700 font-medium"
-              >
-                Regístrate
-              </Link>
-            </p>
+          <div className="text-center text-sm text-slate-300">
+            ¿No tienes cuenta?{" "}
+            <Link
+              href="/register"
+              className="font-semibold text-indigo-200 hover:text-white transition"
+            >
+              Regístrate
+            </Link>
           </div>
-        </div>
+        </motion.div>
       </div>
     </div>
   );

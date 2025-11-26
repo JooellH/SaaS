@@ -22,13 +22,11 @@ export class PublicService {
             price: true,
           },
         },
-        schedule: {
+        schedules: {
           select: {
             weekday: true,
-            openTime: true,
-            closeTime: true,
-            breakStart: true,
-            breakEnd: true,
+            intervals: true,
+            isActive: true,
           },
           orderBy: {
             weekday: 'asc',
