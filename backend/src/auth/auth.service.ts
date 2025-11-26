@@ -1,4 +1,8 @@
-import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  ConflictException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -73,11 +77,11 @@ export class AuthService {
 
     const payload = { sub: user.id, type: 'reset' };
     const token = this.jwtService.sign(payload, { expiresIn: '1h' });
-    
+
     // In a real app, send email. Here we return it for demo/testing purposes
     // or log it.
     console.log(`Reset token for ${email}: ${token}`);
-    return { message: 'Reset link generated (check logs)', token }; 
+    return { message: 'Reset link generated (check logs)', token };
   }
 
   async resetPassword(token: string, newPassword: string) {

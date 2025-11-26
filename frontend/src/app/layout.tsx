@@ -7,7 +7,8 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Reserva Pro - Sistema de Reservas Multinegocio",
-  description: "Sistema profesional de gestión de reservas con recordatorios automáticos vía WhatsApp",
+  description:
+    "Sistema profesional de gestión de reservas con recordatorios automáticos vía WhatsApp",
 };
 
 export default function RootLayout({
@@ -18,9 +19,7 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body className={inter.className}>
-        <AuthProvider>
-          {children}
-        </AuthProvider>
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );

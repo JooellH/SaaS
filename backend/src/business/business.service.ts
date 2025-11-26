@@ -1,4 +1,8 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateBusinessDto } from './dto/create-business.dto';
 import { UpdateBusinessDto } from './dto/update-business.dto';
@@ -46,11 +50,41 @@ export class BusinessService {
 
   async update(id: string, userId: string, dto: UpdateBusinessDto) {
     const business = await this.findOne(id);
-    if (business.ownerId !== userId) throw new NotFoundException('Business not found');
+    if (business.ownerId !== userId)
+      throw new NotFoundException('Business not found');
 
     return this.prisma.business.update({
       where: { id },
       data: dto,
     });
+  }
+
+  async remove(id: string, userId: string) {
+    const business = await this.findOne(id);
+    if (business.ownerId !== userId)
+      throw new NotFoundException('Business not found');
+
+    await this.prisma.$transaction(async (tx) => {
+      const bookingIds = (
+        await tx.booking.findMany({
+          where: { businessId: id },
+          select: { id: true },
+        })
+      ).map((b) => b.id);
+
+      if (bookingIds.length > 0) {
+        await tx.messageLog.deleteMany({
+          where: { bookingId: { in: bookingIds } },
+        });
+      }
+
+      await tx.booking.deleteMany({ where: { businessId: id } });
+      await tx.schedule.deleteMany({ where: { businessId: id } });
+      await tx.service.deleteMany({ where: { businessId: id } });
+      await tx.staff.deleteMany({ where: { businessId: id } });
+      await tx.business.delete({ where: { id } });
+    });
+
+    return { success: true };
   }
 }

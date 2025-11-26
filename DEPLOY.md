@@ -50,6 +50,7 @@ FRONTEND_URL=https://tu-frontend.railway.app
 Una vez desplegado el backend, las migraciones se ejecutan automáticamente en el Dockerfile.
 
 Si necesitas ejecutar el seed manualmente:
+
 1. Ir a la terminal del servicio backend en Railway
 2. Ejecutar: `npm run prisma:seed`
 
@@ -181,6 +182,7 @@ Business URL: /demo-salon
 ## 📊 Monitoreo
 
 En Railway puedes:
+
 - Ver logs en tiempo real
 - Ver métricas de uso
 - Configurar alertas
@@ -195,6 +197,7 @@ En Railway puedes:
 ## 💰 Costos Estimados
 
 Railway ofrece:
+
 - $5 USD de crédito gratis mensual
 - Después: ~$5-10 USD/mes para este proyecto (dependiendo del uso)
 

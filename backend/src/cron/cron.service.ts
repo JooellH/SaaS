@@ -13,11 +13,11 @@ export class CronService {
 
   async sendUpcomingReminders() {
     this.logger.log('Starting reminder cron job');
-    
+
     try {
       // Find bookings in the next 60 minutes
       const bookings = await this.bookingService.findUpcomingReminders(60);
-      
+
       this.logger.log(`Found ${bookings.length} bookings to remind`);
 
       for (const booking of bookings) {
@@ -25,7 +25,9 @@ export class CronService {
           await this.whatsappService.sendReminder(booking.id);
           this.logger.log(`Reminder sent for booking ${booking.id}`);
         } catch (error) {
-          this.logger.error(`Failed to send reminder for booking ${booking.id}: ${error.message}`);
+          this.logger.error(
+            `Failed to send reminder for booking ${booking.id}: ${error.message}`,
+          );
         }
       }
 

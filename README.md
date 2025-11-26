@@ -116,6 +116,7 @@ node index.js
 ## 📚 Endpoints Principales
 
 ### Auth
+
 - `POST /auth/register` - Registro de usuario
 - `POST /auth/login` - Login
 - `POST /auth/refresh` - Refresh token
@@ -123,6 +124,7 @@ node index.js
 - `POST /auth/reset-password` - Resetear contraseña
 
 ### Business
+
 - `POST /business` - Crear negocio
 - `GET /business` - Listar mis negocios
 - `GET /business/:id` - Obtener negocio
@@ -130,12 +132,14 @@ node index.js
 - `GET /business/:slug/public` - Vista pública
 
 ### Services
+
 - `POST /services` - Crear servicio
 - `GET /services/:businessId` - Listar servicios
 - `PATCH /services/:id` - Actualizar servicio
 - `DELETE /services/:id` - Eliminar servicio
 
 ### Bookings
+
 - `POST /bookings` - Crear reserva
 - `GET /bookings/:businessId` - Listar reservas
 - `GET /bookings/:businessId/availability` - Obtener disponibilidad
@@ -143,18 +147,21 @@ node index.js
 - `PATCH /bookings/:id/reschedule` - Reagendar reserva
 
 ### Schedule
+
 - `POST /schedule` - Crear horario
 - `GET /schedule/:businessId` - Listar horarios
 - `PATCH /schedule/:id` - Actualizar horario
 - `DELETE /schedule/:id` - Eliminar horario
 
 ### WhatsApp
+
 - `POST /whatsapp/send-confirmation/:bookingId` - Enviar confirmación
 - `POST /whatsapp/send-reminder/:bookingId` - Enviar recordatorio
 - `POST /whatsapp/send-cancellation/:bookingId` - Enviar cancelación
 - `GET /whatsapp/logs/:bookingId` - Ver logs de mensajes
 
 ### Cron
+
 - `POST /cron/send-reminders` - Ejecutar envío de recordatorios
 
 ## 🔧 Configuración WhatsApp Cloud API
@@ -170,6 +177,7 @@ node index.js
 Ver `backend/prisma/schema.prisma` para el esquema completo.
 
 Entidades principales:
+
 - **User**: Usuarios del sistema
 - **Business**: Negocios (multinegocio)
 - **Service**: Servicios ofrecidos
@@ -180,6 +188,7 @@ Entidades principales:
 ## 🎨 Frontend
 
 El frontend incluye:
+
 - ✅ Autenticación completa (login/register)
 - ✅ Dashboard de negocios
 - ✅ Gestión de servicios
@@ -232,14 +241,17 @@ entropic-apollo/
 ## 🐛 Troubleshooting
 
 ### Error de conexión a base de datos
+
 - Verificar que DATABASE_URL esté correctamente configurada
 - Asegurarse de que las migraciones se ejecutaron
 
 ### Error de CORS
+
 - Verificar que FRONTEND_URL esté configurada en el backend
 - Revisar la configuración de CORS en main.ts
 
 ### Cron job no ejecuta
+
 - Verificar que BACKEND_URL esté correctamente configurada
 - Revisar logs en Railway
 - Verificar que el endpoint /cron/send-reminders sea accesible

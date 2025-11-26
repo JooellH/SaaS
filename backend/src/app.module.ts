@@ -17,6 +17,7 @@ import { PublicModule } from './public/public.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      envFilePath: ['.env.local', '.env'],
     }),
     PrismaModule,
     AuthModule,

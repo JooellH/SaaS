@@ -92,7 +92,9 @@ export class WhatsappService {
   ) {
     if (!token || !phoneNumberId) {
       this.logger.warn('WhatsApp credentials not configured');
-      return this.logMessage(bookingId, type, 'skipped', { reason: 'No credentials' });
+      return this.logMessage(bookingId, type, 'skipped', {
+        reason: 'No credentials',
+      });
     }
 
     try {
@@ -116,12 +118,19 @@ export class WhatsappService {
       return { success: true, data: response.data };
     } catch (error) {
       this.logger.error(`Failed to send WhatsApp message: ${error.message}`);
-      await this.logMessage(bookingId, type, 'failed', { error: error.message });
+      await this.logMessage(bookingId, type, 'failed', {
+        error: error.message,
+      });
       return { success: false, error: error.message };
     }
   }
 
-  private async logMessage(bookingId: string, type: string, status: string, rawResponse: any) {
+  private async logMessage(
+    bookingId: string,
+    type: string,
+    status: string,
+    rawResponse: any,
+  ) {
     return this.prisma.messageLog.create({
       data: {
         bookingId,

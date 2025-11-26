@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Body, Patch, Param, UseGuards, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  UseGuards,
+  Query,
+} from '@nestjs/common';
 import { BookingService } from './booking.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { RescheduleBookingDto } from './dto/reschedule-booking.dto';
@@ -36,7 +45,10 @@ export class BookingController {
 
   @UseGuards(AuthGuard('jwt'))
   @Patch(':id/reschedule')
-  reschedule(@Param('id') id: string, @Body() rescheduleDto: RescheduleBookingDto) {
+  reschedule(
+    @Param('id') id: string,
+    @Body() rescheduleDto: RescheduleBookingDto,
+  ) {
     return this.bookingService.reschedule(id, rescheduleDto);
   }
 }

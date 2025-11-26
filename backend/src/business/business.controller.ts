@@ -1,4 +1,14 @@
-import { Controller, Get, Post, Body, Patch, Param, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  UseGuards,
+  Request,
+  Delete,
+} from '@nestjs/common';
 import { BusinessService } from './business.service';
 import { CreateBusinessDto } from './dto/create-business.dto';
 import { UpdateBusinessDto } from './dto/update-business.dto';
@@ -33,7 +43,17 @@ export class BusinessController {
 
   @UseGuards(AuthGuard('jwt'))
   @Patch(':id')
-  update(@Request() req, @Param('id') id: string, @Body() updateBusinessDto: UpdateBusinessDto) {
+  update(
+    @Request() req,
+    @Param('id') id: string,
+    @Body() updateBusinessDto: UpdateBusinessDto,
+  ) {
     return this.businessService.update(id, req.user.userId, updateBusinessDto);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Delete(':id')
+  remove(@Request() req, @Param('id') id: string) {
+    return this.businessService.remove(id, req.user.userId);
   }
 }

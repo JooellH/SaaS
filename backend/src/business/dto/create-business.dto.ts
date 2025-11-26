@@ -5,7 +5,9 @@ export class CreateBusinessDto {
   name: string;
 
   @IsNotEmpty()
-  @Matches(/^[a-z0-9-]+$/, { message: 'Slug must be lowercase, numbers, and hyphens only' })
+  @Matches(/^[a-z0-9-]+$/, {
+    message: 'Slug must be lowercase, numbers, and hyphens only',
+  })
   slug: string;
 
   @IsNotEmpty()

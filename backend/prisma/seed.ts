@@ -8,7 +8,7 @@ async function main() {
 
   // Create demo user
   const hashedPassword = await bcrypt.hash('demo123', 10);
-  
+
   const user = await prisma.user.upsert({
     where: { email: 'demo@reservapro.com' },
     update: {},
@@ -90,7 +90,7 @@ async function main() {
           breakStart: '13:00',
           breakEnd: '14:00',
         },
-      })
+      }),
     ),
   ]);
 

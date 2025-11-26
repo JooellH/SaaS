@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { RescheduleBookingDto } from './dto/reschedule-booking.dto';
@@ -79,7 +83,7 @@ export class BookingService {
 
   async reschedule(id: string, dto: RescheduleBookingDto) {
     const booking = await this.findOne(id);
-    
+
     const service = await this.prisma.service.findUnique({
       where: { id: booking.serviceId },
     });
@@ -171,7 +175,9 @@ export class BookingService {
 
     for (const booking of existingBookings) {
       const bookingStart = this.timeToMinutes(booking.startTime);
-      const bookingEnd = this.timeToMinutes(booking.endTime) + booking.service.cleaningTimeMinutes;
+      const bookingEnd =
+        this.timeToMinutes(booking.endTime) +
+        booking.service.cleaningTimeMinutes;
 
       if (
         (startMinutes >= bookingStart && startMinutes < bookingEnd) ||
@@ -205,7 +211,11 @@ export class BookingService {
     const openMinutes = this.timeToMinutes(schedule.openTime);
     const closeMinutes = this.timeToMinutes(schedule.closeTime);
 
-    for (let time = openMinutes; time + service.durationMinutes <= closeMinutes; time += 30) {
+    for (
+      let time = openMinutes;
+      time + service.durationMinutes <= closeMinutes;
+      time += 30
+    ) {
       const timeStr = this.minutesToTime(time);
       const isAvailable = await this.checkAvailability(
         businessId,
@@ -237,18 +247,41 @@ export class BookingService {
     const now = new Date();
     const targetTime = addMinutes(now, minutesAhead);
 
-    return this.prisma.booking.findMany({
-      where: {
-        status: 'confirmed',
-        date: {
-          gte: now,
-          lte: targetTime,
-        },
-      },
-      include: {
-        service: true,
-        business: true,
-      },
+    const bookings = await this.prisma.booking.findMany({
+      where: { status: 'confirmed' },
+      include: { service: true, business: true },
     });
+
+    return bookings.filter((booking) => {
+      const startDate = new Date(booking.date);
+      const [hour, minute] = booking.startTime.split(':').map(Number);
+      startDate.setHours(hour, minute, 0, 0);
+
+      const timezone = booking.business.timezone || 'UTC';
+      const startInZone = this.toDateInTimeZone(startDate, timezone);
+      const nowInZone = this.toDateInTimeZone(now, timezone);
+      const targetInZone = this.toDateInTimeZone(targetTime, timezone);
+
+      return startInZone >= nowInZone && startInZone <= targetInZone;
+    });
+  }
+
+  private toDateInTimeZone(date: Date, timeZone: string) {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    }).formatToParts(date);
+
+    const find = (type: string) => parts.find((p) => p.type === type)?.value || '00';
+
+    return new Date(
+      `${find('year')}-${find('month')}-${find('day')}T${find('hour')}:${find('minute')}:${find('second')}Z`,
+    );
   }
 }
