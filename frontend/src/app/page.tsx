@@ -11,9 +11,9 @@ export default function Home() {
   useEffect(() => {
     if (!loading) {
       if (user) {
-        router.push("/dashboard");
+        router.push("/panel");
       } else {
-        router.push("/login");
+        router.push("/inicio-sesion");
       }
     }
   }, [user, loading, router]);

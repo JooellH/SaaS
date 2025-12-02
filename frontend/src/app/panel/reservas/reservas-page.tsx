@@ -29,7 +29,19 @@ const fadeUp = {
   show: { opacity: 1, y: 0 },
 };
 
-export default function BookingsPage() {
+const statusClasses: Record<string, string> = {
+  confirmed: "text-green-200 bg-green-500/15 border-green-300/30",
+  pending: "text-amber-200 bg-amber-500/15 border-amber-300/30",
+  cancelled: "text-red-200 bg-red-500/15 border-red-300/30",
+};
+
+const statusLabels: Record<string, string> = {
+  confirmed: "Confirmada",
+  pending: "Pendiente",
+  cancelled: "Cancelada",
+};
+
+export default function ReservasScreen() {
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [selectedBusinessId, setSelectedBusinessId] = useState<string>("");
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -73,15 +85,6 @@ export default function BookingsPage() {
     setBookings((prev) =>
       prev.map((b) => (b.id === id ? { ...b, status: "cancelled" } : b)),
     );
-  };
-
-  const statusBadge = (status: string) => {
-    const map: Record<string, string> = {
-      confirmed: "text-green-200 bg-green-500/15 border-green-300/30",
-      pending: "text-amber-200 bg-amber-500/15 border-amber-300/30",
-      cancelled: "text-red-200 bg-red-500/15 border-red-300/30",
-    };
-    return map[status] || "text-slate-200 bg-white/10 border-white/15";
   };
 
   const sortedBookings = useMemo(
@@ -157,9 +160,11 @@ export default function BookingsPage() {
                     {booking.clientPhone}
                   </Badge>
                   <Badge
-                    className={`border ${statusBadge(booking.status)}`}
+                    className={`border ${
+                      statusClasses[booking.status] || "text-slate-200 bg-white/10 border-white/15"
+                    }`}
                   >
-                    {booking.status}
+                    {statusLabels[booking.status] || booking.status}
                   </Badge>
                 </div>
                 <div className="text-sm text-slate-200">
@@ -168,8 +173,7 @@ export default function BookingsPage() {
                     day: "2-digit",
                     month: "short",
                     year: "numeric",
-                  })}{" "}
-                  · {booking.startTime} · {booking.service?.name || "Servicio"}
+                  })} {" "}· {booking.startTime} · {booking.service?.name || "Servicio"}
                 </div>
               </div>
               {booking.status !== "cancelled" && (

@@ -21,7 +21,7 @@ const fadeIn = {
   show: { opacity: 1, y: 0 },
 };
 
-export default function DashboardPage() {
+export default function PanelScreen() {
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -39,8 +39,8 @@ export default function DashboardPage() {
     try {
       const response = await api.get("/business");
       setBusinesses(response.data);
-    } catch (error) {
-      console.error("Error loading businesses:", error);
+    } catch (error: unknown) {
+      console.error("Error al cargar negocios:", error);
     } finally {
       setLoading(false);
     }
@@ -57,8 +57,17 @@ export default function DashboardPage() {
         timezone: "America/Argentina/Buenos_Aires",
       });
       loadBusinesses();
-    } catch (error: any) {
-      alert(error.response?.data?.message || "Error al crear negocio");
+    } catch (error: unknown) {
+      const message =
+        typeof error === "object" &&
+        error !== null &&
+        "response" in error &&
+        typeof (error as { response?: { data?: { message?: string } } }).response
+          ?.data?.message === "string"
+          ? (error as { response: { data: { message: string } } }).response.data
+              .message
+          : "Error al crear negocio";
+      alert(message);
     }
   };
 
@@ -68,8 +77,17 @@ export default function DashboardPage() {
     try {
       await api.delete(`/business/${id}`);
       loadBusinesses();
-    } catch (error: any) {
-      alert(error.response?.data?.message || "No se pudo eliminar el negocio");
+    } catch (error: unknown) {
+      const message =
+        typeof error === "object" &&
+        error !== null &&
+        "response" in error &&
+        typeof (error as { response?: { data?: { message?: string } } }).response
+          ?.data?.message === "string"
+          ? (error as { response: { data: { message: string } } }).response.data
+              .message
+          : "No se pudo eliminar el negocio";
+      alert(message);
     }
   };
 
@@ -94,7 +112,7 @@ export default function DashboardPage() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="space-y-2">
           <p className="text-sm text-slate-400">Panel principal</p>
-          <h1 className="text-4xl font-semibold text-white">Mis Negocios</h1>
+          <h1 className="text-4xl font-semibold text-white">Mis negocios</h1>
           <p className="text-slate-400">
             Administra tus espacios y agiliza las reservas con una experiencia
             premium.
@@ -102,7 +120,7 @@ export default function DashboardPage() {
         </div>
         <Button onClick={() => setShowModal(true)} className="text-sm px-4 py-3">
           <PlusCircle className="w-4 h-4" />
-          Nuevo Negocio
+          Nuevo negocio
         </Button>
       </div>
 
@@ -134,7 +152,7 @@ export default function DashboardPage() {
             >
               <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-indigo-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               <div className="flex items-start justify-between gap-3 relative z-10">
-                <Link href={`/dashboard/business/${business.id}`} className="block">
+                <Link href={`/panel/negocio/${business.id}`} className="block">
                   <h3 className="text-xl font-semibold text-white hover:text-indigo-200 transition-colors">
                     {business.name}
                   </h3>
@@ -151,19 +169,19 @@ export default function DashboardPage() {
               </div>
               <div className="flex flex-wrap items-center gap-3 mt-4 text-sm text-indigo-100">
                 <Link
-                  href={`/dashboard/business/${business.id}/bookings`}
+                  href={`/panel/negocio/${business.id}/reservas`}
                   className="pill bg-indigo-500/20 border-indigo-400/30 hover:border-indigo-300/70 hover:bg-indigo-500/30 transition"
                 >
                   Reservas
                 </Link>
                 <Link
-                  href={`/dashboard/business/${business.id}/services`}
+                  href={`/panel/negocio/${business.id}/servicios`}
                   className="pill bg-indigo-500/20 border-indigo-400/30 hover:border-indigo-300/70 hover:bg-indigo-500/30 transition"
                 >
                   Servicios
                 </Link>
                 <Link
-                  href={`/dashboard/business/${business.id}/schedule`}
+                  href={`/panel/negocio/${business.id}/horarios`}
                   className="pill bg-indigo-500/20 border-indigo-400/30 hover:border-indigo-300/70 hover:bg-indigo-500/30 transition"
                 >
                   Horarios
@@ -192,13 +210,17 @@ export default function DashboardPage() {
               <div className="flex items-start justify-between">
                 <div>
                   <h2 className="text-2xl font-semibold text-white">
-                    Nuevo Negocio
+                    Nuevo negocio
                   </h2>
                   <p className="text-sm text-slate-400">
                     Define el nombre, slug y zona horaria para comenzar.
                   </p>
                 </div>
-                <Button onClick={() => setShowModal(false)} variant="ghost" className="text-sm">
+                <Button
+                  onClick={() => setShowModal(false)}
+                  variant="ghost"
+                  className="text-sm"
+                >
                   Cerrar
                 </Button>
               </div>

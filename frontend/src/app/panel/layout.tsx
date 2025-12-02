@@ -26,7 +26,7 @@ export default function DashboardLayout({
 
   useEffect(() => {
     if (!loading && !user) {
-      router.push("/login");
+      router.push("/inicio-sesion");
     }
   }, [user, loading, router]);
 
@@ -43,11 +43,11 @@ export default function DashboardLayout({
   }
 
   const navItems = [
-    { label: "Inicio", href: "/dashboard", icon: Home },
-    { label: "Bookings", href: "/dashboard/bookings", icon: CalendarClock },
-    { label: "Servicios", href: "/dashboard/services", icon: NotebookText },
-    { label: "Horarios", href: "/dashboard/schedule", icon: CalendarClock },
-    { label: "Ajustes", href: "/dashboard/settings", icon: Settings2 },
+    { label: "Inicio", href: "/panel", icon: Home },
+    { label: "Reservas", href: "/panel/reservas", icon: CalendarClock },
+    { label: "Servicios", href: "/panel/servicios", icon: NotebookText },
+    { label: "Horarios", href: "/panel/horarios", icon: CalendarClock },
+    { label: "Ajustes", href: "/panel/ajustes", icon: Settings2 },
   ];
 
   return (
@@ -86,20 +86,13 @@ export default function DashboardLayout({
             );
           })}
         </nav>
-        <button
-          onClick={logout}
-          className="btn-secondary justify-center w-full"
-        >
-          <LogOut className="w-4 h-4" />
-          Cerrar sesión
-        </button>
       </aside>
 
       <div className="flex-1 min-h-screen">
         <motion.nav
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="sticky top-0 z-30 border-b border-white/10 bg-slate-900/70 backdrop-blur px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between"
+          className="sticky top-0 z-30 border-b border-white/10 bg-slate-900/70 backdrop-blur px-4 sm:px-6 lg:px-8 h-16 flex items-center"
         >
           <div className="flex items-center gap-2 text-slate-100 lg:hidden">
             <div className="pill bg-indigo-500/20 border-indigo-400/30">
@@ -109,9 +102,10 @@ export default function DashboardLayout({
               </span>
             </div>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 ml-auto">
             <span className="text-sm text-slate-200/80">
-              Hola, <span className="font-semibold text-slate-100">{user.name}</span>
+              Hola,{" "}
+              <span className="font-semibold text-slate-100">{user.name}</span>
             </span>
             <button
               onClick={logout}

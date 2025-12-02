@@ -8,6 +8,15 @@ export class RateLimitMiddleware implements NestMiddleware {
   private readonly windowMs = 15 * 60 * 1000; // 15 minutes
 
   use(req: Request, res: Response, next: NextFunction) {
+    // Skip rate limiting in development to avoid 429 during local testing/HMR
+    if (process.env.NODE_ENV !== 'production') {
+      return next();
+    }
+
+    if (req.method === 'OPTIONS') {
+      return next();
+    }
+
     const key = req.ip || req.socket.remoteAddress || 'unknown';
     const now = Date.now();
 

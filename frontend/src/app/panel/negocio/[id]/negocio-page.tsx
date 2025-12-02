@@ -19,7 +19,7 @@ const cardVariants = {
   show: { opacity: 1, y: 0 },
 };
 
-export default function BusinessPage() {
+export default function NegocioScreen() {
   const params = useParams<{ id: string }>();
   const businessId = params?.id;
 
@@ -33,10 +33,17 @@ export default function BusinessPage() {
       try {
         const res = await api.get(`/business/${businessId}`);
         setBusiness(res.data);
-      } catch (err: any) {
-        setError(
-          err?.response?.data?.message || "No se pudo cargar el negocio",
-        );
+      } catch (err: unknown) {
+        const message =
+          typeof err === "object" &&
+          err !== null &&
+          "response" in err &&
+          typeof (err as { response?: { data?: { message?: string } } }).response
+            ?.data?.message === "string"
+            ? (err as { response: { data: { message: string } } }).response.data
+                .message
+            : "No se pudo cargar el negocio";
+        setError(message);
       } finally {
         setLoading(false);
       }
@@ -54,9 +61,9 @@ export default function BusinessPage() {
       <div className="py-10 text-center space-y-3">
         <p className="text-lg font-semibold text-white">No se encontró el negocio</p>
         <p className="text-sm text-slate-400">{error}</p>
-        <Link href="/dashboard" className="btn-secondary inline-flex">
+        <Link href="/panel" className="btn-secondary inline-flex">
           <ArrowLeft className="w-4 h-4" />
-          Volver al dashboard
+          Volver al panel
         </Link>
       </div>
     );
@@ -76,7 +83,7 @@ export default function BusinessPage() {
             </p>
           )}
         </div>
-        <Link href="/dashboard" className="btn-secondary">
+        <Link href="/panel" className="btn-secondary">
           <ArrowLeft className="w-4 h-4" />
           Volver
         </Link>
@@ -90,7 +97,7 @@ export default function BusinessPage() {
       >
         <motion.div variants={cardVariants}>
           <Link
-            href={`/dashboard/business/${business.id}/bookings`}
+            href={`/panel/negocio/${business.id}/reservas`}
             className="card hover:border-indigo-300/50 hover:shadow-indigo-500/15 block"
           >
             <div className="flex items-center gap-3">
@@ -107,7 +114,7 @@ export default function BusinessPage() {
 
         <motion.div variants={cardVariants}>
           <Link
-            href={`/dashboard/business/${business.id}/services`}
+            href={`/panel/negocio/${business.id}/servicios`}
             className="card hover:border-indigo-300/50 hover:shadow-indigo-500/15 block"
           >
             <div className="flex items-center gap-3">
@@ -124,7 +131,7 @@ export default function BusinessPage() {
 
         <motion.div variants={cardVariants}>
           <Link
-            href={`/dashboard/business/${business.id}/schedule`}
+            href={`/panel/negocio/${business.id}/horarios`}
             className="card hover:border-indigo-300/50 hover:shadow-indigo-500/15 block"
           >
             <div className="flex items-center gap-3">

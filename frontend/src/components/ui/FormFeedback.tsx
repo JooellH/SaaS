@@ -1,4 +1,4 @@
-import { HTMLAttributes } from "react";
+import { HTMLAttributes, ReactElement } from "react";
 import clsx from "clsx";
 import { AlertTriangle, CheckCircle2 } from "lucide-react";
 
@@ -9,7 +9,7 @@ const styles: Record<Variant, string> = {
   success: "border-green-400/30 bg-green-500/10 text-green-100",
 };
 
-const icons: Record<Variant, JSX.Element> = {
+const icons: Record<Variant, ReactElement> = {
   error: <AlertTriangle className="w-4 h-4" />,
   success: <CheckCircle2 className="w-4 h-4" />,
 };

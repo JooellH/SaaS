@@ -1,12 +1,5 @@
 import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {
-  experimental: {
-    turbo: {
-      // Force Turbopack to treat the frontend folder as the root workspace
-      root: __dirname,
-    },
-  },
-};
+const nextConfig: NextConfig = {};
 
 export default nextConfig;

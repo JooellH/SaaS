@@ -1,18 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import api from "@/lib/api";
 import { bookingSchema, type BookingForm } from "@/lib/validations";
 import { motion } from "framer-motion";
-import {
-  CalendarClock,
-  Clock3,
-  Phone,
-  User,
-  CheckCircle2,
-  AlertTriangle,
-  Sparkles,
-} from "lucide-react";
+import { CalendarClock, Clock3, Phone, User, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import { Card } from "@/components/ui/Card";
@@ -42,11 +35,8 @@ interface Business {
   schedule: ScheduleRow[];
 }
 
-export default function PublicBookingPage({
-  params,
-}: {
-  params: { slug: string };
-}) {
+export default function PublicBookingPage() {
+  const { slug } = useParams<{ slug: string }>();
   const [business, setBusiness] = useState<Business | null>(null);
   const [loading, setLoading] = useState(true);
   const [slots, setSlots] = useState<string[]>([]);
@@ -62,10 +52,11 @@ export default function PublicBookingPage({
   });
 
   useEffect(() => {
+    if (!slug) return;
     const loadBusiness = async () => {
       setError(null);
       try {
-        const res = await api.get(`/public/${params.slug}`);
+        const res = await api.get(`/public/${slug}`);
         setBusiness(res.data);
         if (res.data.services?.length) {
           setForm((prev) => ({ ...prev, serviceId: res.data.services[0].id }));
@@ -77,7 +68,7 @@ export default function PublicBookingPage({
       }
     };
     loadBusiness();
-  }, [params.slug]);
+  }, [slug]);
 
   useEffect(() => {
     const loadSlots = async () => {
@@ -115,8 +106,17 @@ export default function PublicBookingPage({
         businessId: business.id,
       });
       setSuccess("Reserva creada. Te confirmaremos en breve.");
-    } catch (err: any) {
-      setError(err?.response?.data?.message || "No se pudo crear la reserva");
+    } catch (err: unknown) {
+      const message =
+        typeof err === "object" &&
+        err !== null &&
+        "response" in err &&
+        typeof (err as { response?: { data?: { message?: string } } }).response
+          ?.data?.message === "string"
+          ? (err as { response: { data: { message: string } } }).response.data
+              .message
+          : "No se pudo crear la reserva";
+      setError(message);
     } finally {
       setSaving(false);
     }
@@ -238,8 +238,7 @@ export default function PublicBookingPage({
               >
                 {business.services.map((service) => (
                   <option key={service.id} value={service.id}>
-                    {service.name} · {service.durationMinutes} min · $
-                    {service.price}
+                    {service.name} · {service.durationMinutes} min · ${service.price}
                   </option>
                 ))}
               </Select>
