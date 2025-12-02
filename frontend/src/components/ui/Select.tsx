@@ -9,7 +9,8 @@ export const Select = forwardRef<HTMLSelectElement, Props>(
       ref={ref}
       className={clsx(
         "input-field",
-        "min-h-[44px]", // touch target
+        "h-12",
+        "w-full max-w-full overflow-hidden",   // ← FIX REAL
         className,
       )}
       {...props}

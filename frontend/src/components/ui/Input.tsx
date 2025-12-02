@@ -9,7 +9,8 @@ export const Input = forwardRef<HTMLInputElement, Props>(
       ref={ref}
       className={clsx(
         "input-field",
-        "min-h-[44px]", // touch target mobile
+        "h-12",
+        "w-full max-w-full overflow-hidden",   // ← FIX REAL
         className,
       )}
       {...props}
