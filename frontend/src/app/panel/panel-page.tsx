@@ -16,6 +16,13 @@ interface Business {
   createdAt: string;
 }
 
+type LostMembership = {
+  businessId: string;
+  businessName: string;
+  role: string;
+  reason: "PAYMENT_REQUIRED";
+};
+
 const fadeIn = {
   hidden: { opacity: 0, y: 10 },
   show: { opacity: 1, y: 0 },
@@ -24,6 +31,8 @@ const fadeIn = {
 export default function PanelScreen() {
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [loading, setLoading] = useState(true);
+  const [lostMemberships, setLostMemberships] = useState<LostMembership[]>([]);
+  const [showLostModal, setShowLostModal] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [newBusiness, setNewBusiness] = useState({
     name: "",
@@ -38,7 +47,38 @@ export default function PanelScreen() {
   const loadBusinesses = async () => {
     try {
       const response = await api.get("/business");
-      setBusinesses(response.data);
+      const list = Array.isArray(response.data)
+        ? response.data
+        : (response.data as { data?: unknown }).data;
+      const normalized = Array.isArray(list) ? (list as Business[]) : [];
+      setBusinesses(normalized);
+
+      if (normalized.length === 0) {
+        localStorage.removeItem("activeBusinessId");
+        try {
+          const lostRes = await api.get("/business/lost-memberships");
+          const lost = Array.isArray(lostRes.data)
+            ? (lostRes.data as LostMembership[])
+            : [];
+          setLostMemberships(lost);
+          if (lost.length > 0) {
+            const seenKey = `lostMembershipSeen:${lost[0].businessId}`;
+            if (!localStorage.getItem(seenKey)) {
+              localStorage.setItem(seenKey, "1");
+              setShowLostModal(true);
+            }
+          }
+        } catch {
+          setLostMemberships([]);
+        }
+      } else {
+        const stored = localStorage.getItem("activeBusinessId");
+        const businessId =
+          (stored && normalized.some((b) => b.id === stored) && stored) ||
+          normalized[0].id;
+        localStorage.setItem("activeBusinessId", businessId);
+        setLostMemberships([]);
+      }
     } catch (error: unknown) {
       console.error("Error al cargar negocios:", error);
     } finally {
@@ -126,16 +166,54 @@ export default function PanelScreen() {
 
       {businesses.length === 0 ? (
         <Card className="text-center space-y-3">
-          <Building2 className="w-10 h-10 text-indigo-300 mx-auto" />
-          <h3 className="text-lg font-semibold text-white">Sin negocios aún</h3>
-          <p className="text-sm text-slate-400">
-            Crea tu primer negocio para comenzar a gestionar reservas.
-          </p>
-          <div className="flex justify-center">
-            <Button onClick={() => setShowModal(true)} className="px-4 py-2">
-              Crear negocio
-            </Button>
-          </div>
+          {lostMemberships.length > 0 ? (
+            <>
+              <Building2 className="w-10 h-10 text-amber-300 mx-auto" />
+              <h3 className="text-lg font-semibold text-white">
+                Acceso removido
+              </h3>
+              <p className="text-sm text-slate-300">
+                El negocio{" "}
+                <span className="font-semibold text-white">
+                  &quot;{lostMemberships[0].businessName}&quot;
+                </span>{" "}
+                del que eras parte como{" "}
+                <span className="font-semibold text-white">staff</span> ya no
+                está disponible por falta de pago del plan Pro del owner.
+              </p>
+              <p className="text-sm text-slate-400">
+                Cuando el owner reactive Pro vas a recuperar el acceso
+                automáticamente.
+              </p>
+              <div className="flex justify-center gap-2">
+                <Button
+                  onClick={() => setShowModal(true)}
+                  variant="secondary"
+                  className="px-4 py-2"
+                >
+                  Crear mi negocio
+                </Button>
+                <Link href="/panel/planes" className="btn-primary !h-11">
+                  Ver planes
+                </Link>
+              </div>
+            </>
+          ) : (
+            <>
+              <Building2 className="w-10 h-10 text-indigo-300 mx-auto" />
+              <h3 className="text-lg font-semibold text-white">
+                Sin negocios aún
+              </h3>
+              <p className="text-sm text-slate-400">
+                Crea tu primer negocio para comenzar a gestionar reservas.
+              </p>
+              <div className="flex justify-center">
+                <Button onClick={() => setShowModal(true)} className="px-4 py-2">
+                  Crear negocio
+                </Button>
+              </div>
+            </>
+          )}
         </Card>
       ) : (
         <motion.div
@@ -297,6 +375,64 @@ export default function PanelScreen() {
                   </Button>
                 </div>
               </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showLostModal && lostMemberships.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 10 }}
+              transition={{ type: "spring", stiffness: 220, damping: 20 }}
+              className="w-full max-w-lg rounded-3xl bg-slate-900/80 border border-white/10 shadow-2xl shadow-amber-500/15 p-6 space-y-4 text-center"
+            >
+              <Building2 className="w-10 h-10 text-amber-300 mx-auto" />
+              <div className="space-y-2">
+                <h2 className="text-2xl font-semibold text-white">
+                  Acceso removido
+                </h2>
+                <p className="text-sm text-slate-300">
+                  El negocio{" "}
+                  <span className="font-semibold text-white">
+                    &quot;{lostMemberships[0].businessName}&quot;
+                  </span>{" "}
+                  del que eras parte como{" "}
+                  <span className="font-semibold text-white">staff</span> ya no
+                  está disponible por falta de pago del plan Pro del owner.
+                </p>
+                <p className="text-sm text-slate-400">
+                  Cuando el owner reactive Pro vas a recuperar el acceso
+                  automáticamente.
+                </p>
+              </div>
+
+              <div className="flex justify-center gap-2 pt-2">
+                <Button
+                  onClick={() => setShowLostModal(false)}
+                  variant="secondary"
+                  className="px-4 py-2"
+                >
+                  Entendido
+                </Button>
+                <Button
+                  onClick={() => {
+                    setShowLostModal(false);
+                    setShowModal(true);
+                  }}
+                  className="px-4 py-2"
+                >
+                  Crear mi negocio
+                </Button>
+              </div>
             </motion.div>
           </motion.div>
         )}

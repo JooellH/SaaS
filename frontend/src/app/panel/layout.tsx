@@ -125,7 +125,7 @@ export default function DashboardLayout({
         </motion.nav>
 
         <div className="page-shell">
-          <TrialBanner />
+          <TrialBanner key={user.id} />
           {children}
         </div>
       </div>

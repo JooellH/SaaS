@@ -6,7 +6,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateBusinessDto } from './dto/create-business.dto';
 import { UpdateBusinessDto } from './dto/update-business.dto';
-import { StaffStatus } from '@prisma/client';
+import { Prisma, Role, StaffStatus } from '@prisma/client';
 
 const TRIAL_DAYS = 7;
 const PRO_PLAN_ID = 'plan_pro';
@@ -58,13 +58,71 @@ export class BusinessService {
       business.subscription?.status === 'ACTIVE' &&
       business.subscription?.planId === PRO_PLAN_ID;
 
-    const trialActive = new Date() < this.addDays(business.owner.createdAt, TRIAL_DAYS);
+    const trialActive =
+      new Date() < this.addDays(business.owner.createdAt, TRIAL_DAYS);
 
     if (!subscriptionActivePro && !trialActive) {
       throw new NotFoundException('Business not found');
     }
 
     return 'STAFF';
+  }
+
+  async findLostStaffMemberships(userId: string, email?: string) {
+    if (!email) return [];
+
+    const memberships = await this.prisma.staff.findMany({
+      where: {
+        email,
+        status: StaffStatus.ACTIVE,
+      },
+      select: {
+        id: true,
+        role: true,
+        business: {
+          select: {
+            id: true,
+            ownerId: true,
+            name: true,
+            owner: { select: { createdAt: true } },
+            subscription: { select: { status: true, planId: true } },
+          },
+        },
+      },
+    });
+
+    type LostMembership = {
+      businessId: string;
+      businessName: string;
+      role: Role;
+      reason: 'PAYMENT_REQUIRED';
+    };
+
+    const now = new Date();
+    const lost: LostMembership[] = [];
+
+    for (const membership of memberships) {
+      if (membership.business.ownerId === userId) continue;
+
+      const subscriptionActivePro =
+        membership.business.subscription?.status === 'ACTIVE' &&
+        membership.business.subscription?.planId === PRO_PLAN_ID;
+      const trialActive =
+        now < this.addDays(membership.business.owner.createdAt, TRIAL_DAYS);
+
+      if (subscriptionActivePro || trialActive) continue;
+
+      lost.push({
+        businessId: membership.business.id,
+        businessName: membership.business.name,
+        role: membership.role,
+        reason: 'PAYMENT_REQUIRED',
+      });
+    }
+
+    const uniq = new Map<string, LostMembership>();
+    for (const item of lost) uniq.set(item.businessId, item);
+    return Array.from(uniq.values());
   }
 
   async create(userId: string, dto: CreateBusinessDto) {
@@ -77,20 +135,21 @@ export class BusinessService {
       where: { id: 'plan_basic' },
     });
 
-    const data: any = {
+    const data: Prisma.BusinessCreateInput = {
       ...dto,
-      ownerId: userId,
+      owner: { connect: { id: userId } },
+      ...(basicPlan
+        ? {
+            subscription: {
+              create: {
+                planId: basicPlan.id,
+                status: 'ACTIVE',
+                startDate: new Date(),
+              },
+            },
+          }
+        : {}),
     };
-
-    if (basicPlan) {
-      data.subscription = {
-        create: {
-          planId: basicPlan.id,
-          status: 'ACTIVE',
-          startDate: new Date(),
-        },
-      };
-    }
 
     return this.prisma.business.create({ data });
   }

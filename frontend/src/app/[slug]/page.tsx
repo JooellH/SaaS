@@ -169,8 +169,9 @@ export default function PublicBookingPage() {
         : `#${rawBrand}`
       : "#7c3aed";
 
-  const brandStyle: CSSProperties = {
-    ["--brand-color" as any]: brandColor,
+  type CSSVars = CSSProperties & Record<`--${string}`, string>;
+  const brandStyle: CSSVars = {
+    "--brand-color": brandColor,
   };
 
   const brandBorderColor =

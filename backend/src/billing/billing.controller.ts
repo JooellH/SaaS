@@ -14,7 +14,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { BusinessService } from '../business/business.service';
 import type { Request as ExpressRequest } from 'express';
 
-type AuthedRequest = ExpressRequest & { user: { userId: string } };
+type AuthedRequest = ExpressRequest & { user: { userId: string; email?: string } };
 
 @Controller('billing')
 export class BillingController {
@@ -28,8 +28,17 @@ export class BillingController {
     return this.billingService.getPlans();
   }
 
+  @UseGuards(AuthGuard('jwt'))
   @Get('subscription/:businessId')
-  getSubscription(@Param('businessId') businessId: string) {
+  async getSubscription(
+    @Request() req: AuthedRequest,
+    @Param('businessId') businessId: string,
+  ) {
+    await this.businessService.assertUserCanAccessBusiness(
+      businessId,
+      req.user.userId,
+      req.user.email,
+    );
     return this.billingService.getAccess(businessId);
   }
 

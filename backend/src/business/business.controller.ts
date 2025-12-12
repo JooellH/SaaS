@@ -15,7 +15,9 @@ import { UpdateBusinessDto } from './dto/update-business.dto';
 import { AuthGuard } from '@nestjs/passport';
 import type { Request as ExpressRequest } from 'express';
 
-type AuthedRequest = ExpressRequest & { user: { userId: string; email?: string } };
+type AuthedRequest = ExpressRequest & {
+  user: { userId: string; email?: string };
+};
 
 @Controller('business')
 export class BusinessController {
@@ -34,6 +36,15 @@ export class BusinessController {
   @Get()
   findAll(@Request() req: AuthedRequest) {
     return this.businessService.findAll(req.user.userId, req.user.email);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Get('lost-memberships')
+  findLostMemberships(@Request() req: AuthedRequest) {
+    return this.businessService.findLostStaffMemberships(
+      req.user.userId,
+      req.user.email,
+    );
   }
 
   @Get(':slug/public')

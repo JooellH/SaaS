@@ -14,35 +14,51 @@ type BillingAccess = {
 };
 
 type Business = { id: string; name: string };
+type LostMembership = {
+  businessId: string;
+  businessName: string;
+  role: string;
+  reason: "PAYMENT_REQUIRED";
+};
 
 export default function TrialBanner() {
   const [access, setAccess] = useState<BillingAccess | null>(null);
   const [noBusiness, setNoBusiness] = useState(false);
+  const [lost, setLost] = useState<LostMembership[]>([]);
 
   useEffect(() => {
-    const resolveBusinessId = async (): Promise<string> => {
-      const stored = localStorage.getItem("activeBusinessId");
-      if (stored) return stored;
-
-      const res = await api.get("/business");
-      const list = Array.isArray(res.data)
-        ? res.data
-        : (res.data as { data?: unknown }).data;
-      const normalized = Array.isArray(list) ? (list as Business[]) : [];
-      const firstId = normalized[0]?.id || "";
-      if (firstId) localStorage.setItem("activeBusinessId", firstId);
-      return firstId;
-    };
-
     const load = async () => {
       try {
-        const businessId = await resolveBusinessId();
-        if (!businessId) {
+        const businessRes = await api.get("/business");
+        const list = Array.isArray(businessRes.data)
+          ? businessRes.data
+          : (businessRes.data as { data?: unknown }).data;
+        const normalized = Array.isArray(list) ? (list as Business[]) : [];
+
+        if (normalized.length === 0) {
+          localStorage.removeItem("activeBusinessId");
           setNoBusiness(true);
+          try {
+            const lostRes = await api.get("/business/lost-memberships");
+            const lostList = Array.isArray(lostRes.data)
+              ? (lostRes.data as LostMembership[])
+              : [];
+            setLost(lostList);
+          } catch {
+            setLost([]);
+          }
           return;
         }
+
+        const stored = localStorage.getItem("activeBusinessId");
+        const businessId =
+          (stored && normalized.some((b) => b.id === stored) && stored) ||
+          normalized[0].id;
+        localStorage.setItem("activeBusinessId", businessId);
+
         const res = await api.get(`/billing/subscription/${businessId}`);
         setAccess(res.data as BillingAccess);
+        setNoBusiness(false);
       } catch {
         setAccess(null);
       }
@@ -52,12 +68,14 @@ export default function TrialBanner() {
   }, []);
 
   if (noBusiness) {
+    const firstLost = lost[0]?.businessName;
     return (
       <div className="mb-6">
         <div className="rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100 flex items-center justify-between gap-3">
           <div>
-            No tenés acceso a ningún negocio. Pedile al owner que reactive el
-            plan Pro.
+            {firstLost
+              ? `Perdiste acceso al negocio "${firstLost}" por falta de pago del plan Pro del owner.`
+              : "No tenés acceso a ningún negocio. Pedile al owner que reactive el plan Pro."}
           </div>
           <Link href="/panel/planes" className="btn-secondary !h-9 !px-3">
             Ver planes
