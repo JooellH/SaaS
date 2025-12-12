@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { FormFeedback } from "@/components/ui/FormFeedback";
-import { CheckCircle2 } from "lucide-react";
-import { motion } from "framer-motion";
+import { CheckCircle2, Sparkles } from "lucide-react";
+import ElectroBorder from "@/components/ui/electro-border";
 
 interface Business {
   id: string;
@@ -30,9 +30,17 @@ interface Subscription {
   plan: Plan;
 }
 
-const fadeUp = {
-  hidden: { opacity: 0, y: 8 },
-  show: { opacity: 1, y: 0 },
+type BillingAccess = {
+  subscription: Subscription | null;
+  trial: {
+    daysTotal: number;
+    endsAt: string;
+    isActive: boolean;
+    daysLeft: number;
+    isExpired: boolean;
+  };
+  effectivePlan: Plan;
+  effectivePlanId: string;
 };
 
 const limitLabels: Record<string, string> = {
@@ -45,7 +53,7 @@ export default function PlanesScreen() {
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [selectedBusinessId, setSelectedBusinessId] = useState<string>("");
   const [plans, setPlans] = useState<Plan[]>([]);
-  const [subscription, setSubscription] = useState<Subscription | null>(null);
+  const [access, setAccess] = useState<BillingAccess | null>(null);
   const [loadingBusinesses, setLoadingBusinesses] = useState(true);
   const [loadingPlans, setLoadingPlans] = useState(true);
   const [loadingSub, setLoadingSub] = useState(false);
@@ -58,10 +66,18 @@ export default function PlanesScreen() {
       setLoadingBusinesses(true);
       try {
         const res = await api.get("/business");
-        setBusinesses(res.data);
-        if (res.data.length > 0) {
-          setSelectedBusinessId(res.data[0].id);
-        }
+        const list = Array.isArray(res.data)
+          ? res.data
+          : (res.data as { data?: unknown }).data;
+        const normalized = Array.isArray(list) ? (list as Business[]) : [];
+        setBusinesses(normalized);
+
+        const active = localStorage.getItem("activeBusinessId");
+        const nextId =
+          (active && normalized.some((b) => b.id === active) && active) ||
+          normalized[0]?.id ||
+          "";
+        setSelectedBusinessId(nextId);
       } catch {
         setError("No se pudieron cargar los negocios.");
       } finally {
@@ -73,7 +89,10 @@ export default function PlanesScreen() {
       setLoadingPlans(true);
       try {
         const res = await api.get("/billing/plans");
-        setPlans(res.data);
+        const list = Array.isArray(res.data)
+          ? res.data
+          : (res.data as { data?: unknown }).data;
+        setPlans(Array.isArray(list) ? (list as Plan[]) : []);
       } catch {
         setError("No se pudieron cargar los planes.");
       } finally {
@@ -87,6 +106,11 @@ export default function PlanesScreen() {
 
   useEffect(() => {
     if (!selectedBusinessId) return;
+    localStorage.setItem("activeBusinessId", selectedBusinessId);
+  }, [selectedBusinessId]);
+
+  useEffect(() => {
+    if (!selectedBusinessId) return;
     const loadSubscription = async () => {
       setLoadingSub(true);
       setError(null);
@@ -94,9 +118,9 @@ export default function PlanesScreen() {
         const res = await api.get(
           `/billing/subscription/${selectedBusinessId}`,
         );
-        setSubscription(res.data);
+        setAccess(res.data as BillingAccess);
       } catch {
-        setSubscription(null);
+        setAccess(null);
       } finally {
         setLoadingSub(false);
       }
@@ -119,7 +143,10 @@ export default function PlanesScreen() {
         `/billing/subscription/${selectedBusinessId}`,
         { planId },
       );
-      setSubscription(res.data);
+      const refreshed = await api.get(
+        `/billing/subscription/${selectedBusinessId}`,
+      );
+      setAccess(refreshed.data as BillingAccess);
       setSuccess("Plan actualizado correctamente.");
     } catch (err: unknown) {
       const message =
@@ -155,6 +182,9 @@ export default function PlanesScreen() {
             className="w-56"
             disabled={loadingBusinesses}
           >
+            <option value="" disabled>
+              Selecciona un negocio
+            </option>
             {businesses.map((b) => (
               <option key={b.id} value={b.id}>
                 {b.name}
@@ -166,6 +196,20 @@ export default function PlanesScreen() {
 
       {error && <FormFeedback variant="error" message={error} />}
       {success && <FormFeedback variant="success" message={success} />}
+
+      {access?.trial?.isActive && (
+        <FormFeedback
+          variant="success"
+          message={`Tenés prueba Pro gratis activa: te quedan ${access.trial.daysLeft} día(s).`}
+        />
+      )}
+
+      {access?.trial?.isExpired && (
+        <FormFeedback
+          variant="error"
+          message="Tu prueba Pro terminó. Se activaron límites del plan Básico (personal, servicios y reservas/mes)."
+        />
+      )}
 
       {(loadingPlans || loadingSub) && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -180,22 +224,31 @@ export default function PlanesScreen() {
       )}
 
       {!loadingPlans && (
-        <motion.div
-          initial="hidden"
-          animate="show"
-          variants={{ show: { transition: { staggerChildren: 0.04 } } }}
-          className="grid grid-cols-1 md:grid-cols-3 gap-4"
-        >
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {sortedPlans.map((plan) => {
-            const isCurrent = subscription?.planId === plan.id;
+            const effectivePlanId = access?.effectivePlanId ?? "";
+            const isCurrent = effectivePlanId === plan.id;
+            const isTrialPro =
+              access?.trial?.isActive && plan.id === "plan_pro";
+            const isPaidCurrent =
+              access?.subscription?.status === "ACTIVE" &&
+              access.subscription.planId === plan.id;
             const limitsEntries = Object.entries(plan.limits || {});
+            const accent =
+              plan.id === "plan_pro" ? "#8b5cf6" : "#22d3ee";
             return (
-              <motion.div key={plan.id} variants={fadeUp}>
+              <ElectroBorder
+                key={plan.id}
+                borderColor={accent}
+                borderWidth={2}
+                distortion={plan.id === "plan_pro" ? 1.2 : 0.9}
+                animationSpeed={plan.id === "plan_pro" ? 1.0 : 0.7}
+                glowBlur={36}
+                radius={24}
+              >
                 <Card
-                  className={`space-y-4 h-full ${
-                    isCurrent
-                      ? "border-indigo-400/50 bg-indigo-500/5"
-                      : ""
+                  className={`space-y-4 h-full border-0 hover:border-0 shadow-none hover:shadow-none ${
+                    isCurrent ? "bg-indigo-500/5" : "bg-white/5"
                   }`}
                 >
                   <div className="space-y-1">
@@ -205,7 +258,13 @@ export default function PlanesScreen() {
                       </h2>
                       {isCurrent && (
                         <span className="chip bg-indigo-500/15 text-indigo-100 border-indigo-400/30">
-                          Actual
+                          {isTrialPro ? (
+                            <>
+                              <Sparkles className="w-3 h-3" /> En prueba
+                            </>
+                          ) : (
+                            "Actual"
+                          )}
                         </span>
                       )}
                     </div>
@@ -236,15 +295,17 @@ export default function PlanesScreen() {
 
                   <Button
                     onClick={() => changePlan(plan.id)}
-                    disabled={saving !== null || isCurrent}
+                    disabled={saving !== null || isPaidCurrent}
                     className="w-full"
                     variant={isCurrent ? "secondary" : "primary"}
                   >
-                    {isCurrent ? (
+                    {isPaidCurrent ? (
                       <>
                         <CheckCircle2 className="w-4 h-4" />
                         Plan actual
                       </>
+                    ) : isCurrent ? (
+                      "Plan en prueba"
                     ) : saving === plan.id ? (
                       "Actualizando..."
                     ) : (
@@ -252,10 +313,10 @@ export default function PlanesScreen() {
                     )}
                   </Button>
                 </Card>
-              </motion.div>
+              </ElectroBorder>
             );
           })}
-        </motion.div>
+        </div>
       )}
 
       {!loadingPlans && plans.length === 0 && (

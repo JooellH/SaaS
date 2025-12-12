@@ -15,4 +15,3 @@ export class CronController {
     return this.cronService.getLogs();
   }
 }
-

@@ -8,9 +8,64 @@ import { CreateBusinessDto } from './dto/create-business.dto';
 import { UpdateBusinessDto } from './dto/update-business.dto';
 import { StaffStatus } from '@prisma/client';
 
+const TRIAL_DAYS = 7;
+const PRO_PLAN_ID = 'plan_pro';
+
 @Injectable()
 export class BusinessService {
   constructor(private prisma: PrismaService) {}
+
+  private addDays(date: Date, days: number) {
+    const next = new Date(date);
+    next.setDate(next.getDate() + days);
+    return next;
+  }
+
+  private subDays(date: Date, days: number) {
+    const next = new Date(date);
+    next.setDate(next.getDate() - days);
+    return next;
+  }
+
+  async assertUserCanAccessBusiness(
+    businessId: string,
+    userId: string,
+    email?: string,
+  ): Promise<'OWNER' | 'STAFF'> {
+    const business = await this.prisma.business.findUnique({
+      where: { id: businessId },
+      include: {
+        owner: { select: { createdAt: true } },
+        subscription: { select: { status: true, planId: true } },
+        staff: email
+          ? {
+              where: { email, status: StaffStatus.ACTIVE },
+              select: { id: true },
+              take: 1,
+            }
+          : false,
+      },
+    });
+
+    if (!business) throw new NotFoundException('Business not found');
+
+    if (business.ownerId === userId) return 'OWNER';
+
+    const isStaff = Array.isArray(business.staff) && business.staff.length > 0;
+    if (!isStaff) throw new NotFoundException('Business not found');
+
+    const subscriptionActivePro =
+      business.subscription?.status === 'ACTIVE' &&
+      business.subscription?.planId === PRO_PLAN_ID;
+
+    const trialActive = new Date() < this.addDays(business.owner.createdAt, TRIAL_DAYS);
+
+    if (!subscriptionActivePro && !trialActive) {
+      throw new NotFoundException('Business not found');
+    }
+
+    return 'STAFF';
+  }
 
   async create(userId: string, dto: CreateBusinessDto) {
     const existing = await this.prisma.business.findUnique({
@@ -41,10 +96,17 @@ export class BusinessService {
   }
 
   async findAll(userId: string, email?: string) {
-    const where = email
-      ? {
-          OR: [
-            { ownerId: userId },
+    if (!email) {
+      return this.prisma.business.findMany({ where: { ownerId: userId } });
+    }
+
+    const trialThreshold = this.subDays(new Date(), TRIAL_DAYS);
+
+    const where = {
+      OR: [
+        { ownerId: userId },
+        {
+          AND: [
             {
               staff: {
                 some: {
@@ -53,9 +115,27 @@ export class BusinessService {
                 },
               },
             },
+            {
+              OR: [
+                {
+                  subscription: {
+                    is: {
+                      status: 'ACTIVE',
+                      planId: PRO_PLAN_ID,
+                    },
+                  },
+                },
+                {
+                  owner: {
+                    createdAt: { gte: trialThreshold },
+                  },
+                },
+              ],
+            },
           ],
-        }
-      : { ownerId: userId };
+        },
+      ],
+    };
 
     return this.prisma.business.findMany({ where });
   }

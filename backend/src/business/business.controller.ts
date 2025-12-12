@@ -13,6 +13,9 @@ import { BusinessService } from './business.service';
 import { CreateBusinessDto } from './dto/create-business.dto';
 import { UpdateBusinessDto } from './dto/update-business.dto';
 import { AuthGuard } from '@nestjs/passport';
+import type { Request as ExpressRequest } from 'express';
+
+type AuthedRequest = ExpressRequest & { user: { userId: string; email?: string } };
 
 @Controller('business')
 export class BusinessController {
@@ -20,13 +23,16 @@ export class BusinessController {
 
   @UseGuards(AuthGuard('jwt'))
   @Post()
-  create(@Request() req, @Body() createBusinessDto: CreateBusinessDto) {
+  create(
+    @Request() req: AuthedRequest,
+    @Body() createBusinessDto: CreateBusinessDto,
+  ) {
     return this.businessService.create(req.user.userId, createBusinessDto);
   }
 
   @UseGuards(AuthGuard('jwt'))
   @Get()
-  findAll(@Request() req) {
+  findAll(@Request() req: AuthedRequest) {
     return this.businessService.findAll(req.user.userId, req.user.email);
   }
 
@@ -37,14 +43,19 @@ export class BusinessController {
 
   @UseGuards(AuthGuard('jwt'))
   @Get(':id')
-  findOne(@Param('id') id: string) {
+  async findOne(@Request() req: AuthedRequest, @Param('id') id: string) {
+    await this.businessService.assertUserCanAccessBusiness(
+      id,
+      req.user.userId,
+      req.user.email,
+    );
     return this.businessService.findOne(id);
   }
 
   @UseGuards(AuthGuard('jwt'))
   @Patch(':id')
   update(
-    @Request() req,
+    @Request() req: AuthedRequest,
     @Param('id') id: string,
     @Body() updateBusinessDto: UpdateBusinessDto,
   ) {
@@ -53,7 +64,7 @@ export class BusinessController {
 
   @UseGuards(AuthGuard('jwt'))
   @Delete(':id')
-  remove(@Request() req, @Param('id') id: string) {
+  remove(@Request() req: AuthedRequest, @Param('id') id: string) {
     return this.businessService.remove(id, req.user.userId);
   }
 }

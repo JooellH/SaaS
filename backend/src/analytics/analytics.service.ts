@@ -27,16 +27,21 @@ export class AnalyticsService {
     });
 
     // Enrich with service names
-    const popularServices = await Promise.all(services.map(async s => {
-      const service = await this.prisma.service.findUnique({ where: { id: s.serviceId } });
-      return { name: service?.name, count: s._count.serviceId };
-    }));
+    const popularServices = await Promise.all(
+      services.map(async (s) => {
+        const service = await this.prisma.service.findUnique({
+          where: { id: s.serviceId },
+        });
+        return { name: service?.name, count: s._count.serviceId };
+      }),
+    );
 
     // 3. Cancellation Rate
     const cancelled = await this.prisma.booking.count({
       where: { businessId, status: 'cancelled' },
     });
-    const cancellationRate = totalBookings > 0 ? (cancelled / totalBookings) * 100 : 0;
+    const cancellationRate =
+      totalBookings > 0 ? (cancelled / totalBookings) * 100 : 0;
 
     // 4. Bookings by Status
     const byStatus = await this.prisma.booking.groupBy({

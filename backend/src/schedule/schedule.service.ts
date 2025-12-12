@@ -63,7 +63,13 @@ export class ScheduleService {
   }
 
   // Special Days
-  async addSpecialDay(businessId: string, date: Date, isClosed: boolean, intervals?: any, reason?: string) {
+  async addSpecialDay(
+    businessId: string,
+    date: Date,
+    isClosed: boolean,
+    intervals?: any,
+    reason?: string,
+  ) {
     return this.prisma.specialDay.create({
       data: {
         businessId,

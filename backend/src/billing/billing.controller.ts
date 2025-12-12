@@ -12,6 +12,9 @@ import { BillingService } from './billing.service';
 import { UpdateSubscriptionDto } from './dto/update-subscription.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { BusinessService } from '../business/business.service';
+import type { Request as ExpressRequest } from 'express';
+
+type AuthedRequest = ExpressRequest & { user: { userId: string } };
 
 @Controller('billing')
 export class BillingController {
@@ -27,13 +30,13 @@ export class BillingController {
 
   @Get('subscription/:businessId')
   getSubscription(@Param('businessId') businessId: string) {
-    return this.billingService.getSubscription(businessId);
+    return this.billingService.getAccess(businessId);
   }
 
   @UseGuards(AuthGuard('jwt'))
   @Patch('subscription/:businessId')
   async updateSubscription(
-    @Request() req,
+    @Request() req: AuthedRequest,
     @Param('businessId') businessId: string,
     @Body() dto: UpdateSubscriptionDto,
   ) {

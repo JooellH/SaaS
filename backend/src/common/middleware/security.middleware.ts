@@ -15,7 +15,9 @@ export class SecurityMiddleware implements NestMiddleware {
     ];
 
     const urlPath = req.path;
-    const isSuspicious = suspiciousPatterns.some(pattern => pattern.test(urlPath));
+    const isSuspicious = suspiciousPatterns.some((pattern) =>
+      pattern.test(urlPath),
+    );
 
     if (isSuspicious) {
       this.logsService.createSecurityLog({

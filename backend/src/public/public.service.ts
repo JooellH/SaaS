@@ -42,19 +42,18 @@ export class PublicService {
 
     const schedules = business.schedules.map((s) => {
       // Normalize intervals coming from Json -> typed array
-      const intervals =
-        Array.isArray(s.intervals)
-          ? s.intervals
-              .map((i) =>
-                i &&
-                typeof i === 'object' &&
-                'start' in i &&
-                'end' in i
-                  ? { start: (i as any).start as string, end: (i as any).end as string }
-                  : null,
-              )
-              .filter((i): i is { start: string; end: string } => Boolean(i))
-          : [];
+      const intervals = Array.isArray(s.intervals)
+        ? s.intervals
+            .map((i) =>
+              i && typeof i === 'object' && 'start' in i && 'end' in i
+                ? {
+                    start: (i as any).start as string,
+                    end: (i as any).end as string,
+                  }
+                : null,
+            )
+            .filter((i): i is { start: string; end: string } => Boolean(i))
+        : [];
 
       const first = intervals[0];
       const last = intervals[intervals.length - 1];
@@ -62,8 +61,8 @@ export class PublicService {
         weekday: s.weekday,
         isActive: s.isActive,
         intervals,
-        openTime: first?.start || "-",
-        closeTime: last?.end || "-",
+        openTime: first?.start || '-',
+        closeTime: last?.end || '-',
       };
     });
 

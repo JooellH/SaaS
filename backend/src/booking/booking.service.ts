@@ -6,13 +6,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { RescheduleBookingDto } from './dto/reschedule-booking.dto';
-import {
-  addMinutes,
-  parse,
-  format,
-  startOfMonth,
-  endOfMonth,
-} from 'date-fns';
+import { addMinutes, parse, format, startOfMonth, endOfMonth } from 'date-fns';
 import { WhatsappService } from '../whatsapp/whatsapp.service';
 import { BillingService } from '../billing/billing.service';
 
@@ -375,7 +369,8 @@ export class BookingService {
       hour12: false,
     }).formatToParts(date);
 
-    const find = (type: string) => parts.find((p) => p.type === type)?.value || '00';
+    const find = (type: string) =>
+      parts.find((p) => p.type === type)?.value || '00';
 
     return new Date(
       `${find('year')}-${find('month')}-${find('day')}T${find('hour')}:${find('minute')}:${find('second')}Z`,

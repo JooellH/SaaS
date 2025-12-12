@@ -51,8 +51,6 @@ import { ScheduleModule as NestScheduleModule } from '@nestjs/schedule';
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer
-      .apply(RateLimitMiddleware, SecurityMiddleware)
-      .forRoutes('*');
+    consumer.apply(RateLimitMiddleware, SecurityMiddleware).forRoutes('*');
   }
 }

@@ -9,7 +9,6 @@ import { Select } from "@/components/ui/Select";
 import { FormFeedback } from "@/components/ui/FormFeedback";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Copy, Plus, Trash2, UserCheck, Users } from "lucide-react";
-import { motion } from "framer-motion";
 
 interface Business {
   id: string;
@@ -26,17 +25,18 @@ interface Staff {
   inviteToken?: string | null;
 }
 
-const fadeUp = {
-  hidden: { opacity: 0, y: 8 },
-  show: { opacity: 1, y: 0 },
+type BillingAccess = {
+  effectivePlanId: string;
 };
 
 export default function PersonalScreen() {
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [selectedBusinessId, setSelectedBusinessId] = useState<string>("");
   const [staff, setStaff] = useState<Staff[]>([]);
+  const [access, setAccess] = useState<BillingAccess | null>(null);
   const [loadingBusinesses, setLoadingBusinesses] = useState(true);
   const [loadingStaff, setLoadingStaff] = useState(false);
+  const [loadingAccess, setLoadingAccess] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -58,10 +58,19 @@ export default function PersonalScreen() {
       setError(null);
       try {
         const res = await api.get("/business");
-        setBusinesses(res.data);
-        if (res.data.length > 0) {
-          setSelectedBusinessId(res.data[0].id);
-        }
+        const list = Array.isArray(res.data)
+          ? res.data
+          : (res.data as { data?: unknown }).data;
+        const normalized = Array.isArray(list) ? (list as Business[]) : [];
+
+        setBusinesses(normalized);
+
+        const active = localStorage.getItem("activeBusinessId");
+        const nextId =
+          (active && normalized.some((b) => b.id === active) && active) ||
+          normalized[0]?.id ||
+          "";
+        setSelectedBusinessId(nextId);
       } catch {
         setError("No se pudieron cargar los negocios.");
       } finally {
@@ -74,6 +83,25 @@ export default function PersonalScreen() {
 
   useEffect(() => {
     if (!selectedBusinessId) return;
+    localStorage.setItem("activeBusinessId", selectedBusinessId);
+  }, [selectedBusinessId]);
+
+  useEffect(() => {
+    if (!selectedBusinessId) return;
+    const loadAccess = async () => {
+      setLoadingAccess(true);
+      try {
+        const res = await api.get(
+          `/billing/subscription/${selectedBusinessId}`,
+        );
+        setAccess(res.data as BillingAccess);
+      } catch {
+        setAccess(null);
+      } finally {
+        setLoadingAccess(false);
+      }
+    };
+
     const loadStaff = async () => {
       setLoadingStaff(true);
       setError(null);
@@ -81,7 +109,10 @@ export default function PersonalScreen() {
         const res = await api.get(
           `/business/${selectedBusinessId}/staff`,
         );
-        setStaff(res.data);
+        const list = Array.isArray(res.data)
+          ? res.data
+          : (res.data as { data?: unknown }).data;
+        setStaff(Array.isArray(list) ? (list as Staff[]) : []);
       } catch {
         setError("No se pudo cargar el personal.");
       } finally {
@@ -89,12 +120,19 @@ export default function PersonalScreen() {
       }
     };
 
+    loadAccess();
     loadStaff();
   }, [selectedBusinessId]);
+
+  const proEnabled = access?.effectivePlanId === "plan_pro";
 
   const handleCreate = async (e: FormEvent) => {
     e.preventDefault();
     if (!selectedBusinessId) return;
+    if (!proEnabled) {
+      setError("Personal está disponible solo en el plan Pro.");
+      return;
+    }
     setSaving(true);
     setError(null);
     setSuccess(null);
@@ -130,6 +168,10 @@ export default function PersonalScreen() {
   };
 
   const deleteStaff = async (staffId: string) => {
+    if (!proEnabled) {
+      setError("Para eliminar personal necesitás el plan Pro.");
+      return;
+    }
     if (!confirm("¿Eliminar este miembro del personal?")) return;
     try {
       await api.delete(`/business/${selectedBusinessId}/staff/${staffId}`);
@@ -175,6 +217,9 @@ export default function PersonalScreen() {
             className="w-56"
             disabled={loadingBusinesses}
           >
+            <option value="" disabled>
+              Selecciona un negocio
+            </option>
             {businesses.map((b) => (
               <option key={b.id} value={b.id}>
                 {b.name}
@@ -218,6 +263,11 @@ export default function PersonalScreen() {
             Se genera un link de invitación único.
           </p>
         </div>
+        {!loadingAccess && !proEnabled && (
+          <div className="rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+            Bloqueado: para invitar o eliminar personal necesitás Pro.
+          </div>
+        )}
         <form
           onSubmit={handleCreate}
           className="form-grid md:grid-cols-4"
@@ -230,6 +280,7 @@ export default function PersonalScreen() {
                 setForm((prev) => ({ ...prev, name: e.target.value }))
               }
               required
+              disabled={!proEnabled || loadingAccess}
             />
           </div>
           <div className="space-y-2 md:col-span-2">
@@ -241,6 +292,7 @@ export default function PersonalScreen() {
                 setForm((prev) => ({ ...prev, email: e.target.value }))
               }
               required
+              disabled={!proEnabled || loadingAccess}
             />
           </div>
           <div className="space-y-2 md:col-span-1">
@@ -252,13 +304,14 @@ export default function PersonalScreen() {
                 setForm((prev) => ({ ...prev, phone: e.target.value }))
               }
               placeholder="+54..."
+              disabled={!proEnabled || loadingAccess}
             />
           </div>
           <div className="flex items-end md:col-span-4">
             <Button
               type="submit"
               className="w-full h-12"
-              disabled={saving || !selectedBusinessId}
+              disabled={saving || !selectedBusinessId || !proEnabled || loadingAccess}
             >
               <Plus className="w-4 h-4" />
               {saving ? "Guardando..." : "Crear invitación"}
@@ -267,86 +320,85 @@ export default function PersonalScreen() {
         </form>
       </Card>
 
-      <motion.div
-        initial="hidden"
-        animate="show"
-        variants={{ show: { transition: { staggerChildren: 0.04 } } }}
-        className="space-y-3 max-w-3xl"
-      >
+      <Card className="space-y-3 max-w-3xl">
+        <h2 className="text-lg font-semibold text-white">Personal cargado</h2>
+
         {loadingBusinesses || loadingStaff ? (
-          [...Array(3)].map((_, i) => (
-            <Card key={i} className="space-y-2">
-              <Skeleton className="h-5 w-1/2" />
-              <Skeleton className="h-4 w-2/3" />
-            </Card>
-          ))
+          <div className="space-y-2">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="space-y-2">
+                <Skeleton className="h-5 w-1/2" />
+                <Skeleton className="h-4 w-2/3" />
+              </div>
+            ))}
+          </div>
         ) : sortedStaff.length === 0 ? (
-          <Card className="text-sm text-slate-300 flex items-center gap-2">
+          <div className="text-sm text-slate-300 flex items-center gap-2">
             <Users className="w-4 h-4 text-slate-400" />
             No hay personal aún.
-          </Card>
+          </div>
         ) : (
-          sortedStaff.map((member) => {
-            const inviteLink =
-              member.inviteToken && origin
-                ? `${origin}/aceptar-invitacion?token=${member.inviteToken}`
-                : null;
+          <div className="space-y-3">
+            {sortedStaff.map((member) => {
+              const inviteLink =
+                member.inviteToken && origin
+                  ? `${origin}/aceptar-invitacion?token=${member.inviteToken}`
+                  : null;
 
-            return (
-              <motion.div
-                key={member.id}
-                variants={fadeUp}
-                className="card flex flex-col gap-2 md:flex-row md:items-center md:justify-between"
-              >
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <UserCheck className="w-4 h-4 text-indigo-300" />
-                    <span className="text-base font-semibold text-white">
-                      {member.name}
-                    </span>
-                    <span className="chip text-xs">
-                      {member.role === "OWNER" ? "Owner" : "Staff"}
-                    </span>
-                    <span className="chip text-xs">
-                      {member.status}
-                    </span>
-                  </div>
-                  <div className="text-sm text-slate-300">
-                    {member.email}
-                    {member.phone ? ` · ${member.phone}` : ""}
-                  </div>
-
-                  {member.inviteToken && inviteLink && (
-                    <div className="text-xs text-slate-300 flex items-center gap-2">
-                      <span className="chip bg-amber-500/15 text-amber-100 border-amber-400/30">
-                        Invitación pendiente
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => copyInviteLink(member.inviteToken!)}
-                        className="btn-ghost h-8 px-2"
-                      >
-                        <Copy className="w-3 h-3" />
-                        Copiar link
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                <Button
-                  variant="secondary"
-                  className="text-red-200 hover:text-white self-start md:self-auto"
-                  onClick={() => deleteStaff(member.id)}
-                  aria-label="Eliminar personal"
+              return (
+                <div
+                  key={member.id}
+                  className="rounded-2xl border border-white/10 bg-white/5 flex flex-col gap-2 md:flex-row md:items-center md:justify-between px-4 py-3"
                 >
-                  <Trash2 className="w-4 h-4" />
-                  Eliminar
-                </Button>
-              </motion.div>
-            );
-          })
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <UserCheck className="w-4 h-4 text-indigo-300" />
+                      <span className="text-base font-semibold text-white">
+                        {member.name}
+                      </span>
+                      <span className="chip text-xs">
+                        {member.role === "OWNER" ? "Owner" : "Staff"}
+                      </span>
+                      <span className="chip text-xs">{member.status}</span>
+                    </div>
+                    <div className="text-sm text-slate-300">
+                      {member.email}
+                      {member.phone ? ` · ${member.phone}` : ""}
+                    </div>
+
+                    {member.inviteToken && inviteLink && (
+                      <div className="text-xs text-slate-300 flex items-center gap-2">
+                        <span className="chip bg-amber-500/15 text-amber-100 border-amber-400/30">
+                          Invitación pendiente
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => copyInviteLink(member.inviteToken!)}
+                          className="btn-ghost h-8 px-2"
+                        >
+                          <Copy className="w-3 h-3" />
+                          Copiar link
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <Button
+                    variant="secondary"
+                    className="text-red-200 hover:text-white self-start md:self-auto"
+                    onClick={() => deleteStaff(member.id)}
+                    aria-label="Eliminar personal"
+                    disabled={!proEnabled || loadingAccess}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Eliminar
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
         )}
-      </motion.div>
+      </Card>
     </div>
   );
 }

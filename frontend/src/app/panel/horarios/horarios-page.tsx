@@ -4,7 +4,6 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import api from "@/lib/api";
 import { scheduleSchema } from "@/lib/validations";
 import { mapSchedulesFromApi } from "@/lib/schedule";
-import { motion } from "framer-motion";
 import { Trash2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
@@ -29,38 +28,46 @@ interface ScheduleRow {
 
 const weekdays = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
-const emptySchedule = {
-  weekday: 1,
+const makeEmptySchedule = (weekday = 1) => ({
+  weekday,
   openTime: "09:00",
   closeTime: "18:00",
   breakStart: "",
   breakEnd: "",
-};
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 8 },
-  show: { opacity: 1, y: 0 },
-};
+});
 
 export default function HorariosScreen() {
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [selectedBusinessId, setSelectedBusinessId] = useState<string>("");
   const [schedule, setSchedule] = useState<ScheduleRow[]>([]);
-  const [form, setForm] = useState(emptySchedule);
+  const [form, setForm] = useState(makeEmptySchedule());
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [loadingBusinesses, setLoadingBusinesses] = useState(false);
   const [loadingSchedule, setLoadingSchedule] = useState(false);
 
   useEffect(() => {
     const loadBusinesses = async () => {
+      setLoadingBusinesses(true);
       try {
         const res = await api.get("/business");
-        setBusinesses(res.data);
-        if (res.data.length > 0) {
-          setSelectedBusinessId(res.data[0].id);
-        }
+        const list = Array.isArray(res.data)
+          ? res.data
+          : (res.data as { data?: unknown }).data;
+        const normalized = Array.isArray(list) ? (list as Business[]) : [];
+
+        setBusinesses(normalized);
+
+        const active = localStorage.getItem("activeBusinessId");
+        const nextId =
+          (active && normalized.some((b) => b.id === active) && active) ||
+          normalized[0]?.id ||
+          "";
+        setSelectedBusinessId(nextId);
       } catch {
         setError("No se pudieron cargar los negocios");
+      } finally {
+        setLoadingBusinesses(false);
       }
     };
     loadBusinesses();
@@ -68,11 +75,28 @@ export default function HorariosScreen() {
 
   useEffect(() => {
     if (!selectedBusinessId) return;
+    localStorage.setItem("activeBusinessId", selectedBusinessId);
+  }, [selectedBusinessId]);
+
+  useEffect(() => {
+    if (!selectedBusinessId) return;
     const loadSchedule = async () => {
       setLoadingSchedule(true);
       try {
         const res = await api.get(`/business/${selectedBusinessId}/schedule`);
-        setSchedule(mapSchedulesFromApi(res.data));
+        const mapped = mapSchedulesFromApi(res.data);
+        setSchedule(mapped);
+        setForm((prev) => {
+          const existing = mapped.find((row) => row.weekday === prev.weekday);
+          if (!existing) return prev;
+          return {
+            weekday: existing.weekday,
+            openTime: existing.openTime,
+            closeTime: existing.closeTime,
+            breakStart: existing.breakStart ?? "",
+            breakEnd: existing.breakEnd ?? "",
+          };
+        });
       } catch {
         setError("No se pudo cargar la agenda");
       } finally {
@@ -99,8 +123,21 @@ export default function HorariosScreen() {
     try {
       await api.post(`/business/${selectedBusinessId}/schedule`, parsed.data);
       const res = await api.get(`/business/${selectedBusinessId}/schedule`);
-      setSchedule(mapSchedulesFromApi(res.data));
-      setForm(emptySchedule);
+      const mapped = mapSchedulesFromApi(res.data);
+      setSchedule(mapped);
+      const weekday = Number(parsed.data.weekday);
+      const existing = mapped.find((row) => row.weekday === weekday);
+      setForm(
+        existing
+          ? {
+              weekday: existing.weekday,
+              openTime: existing.openTime,
+              closeTime: existing.closeTime,
+              breakStart: existing.breakStart ?? "",
+              breakEnd: existing.breakEnd ?? "",
+            }
+          : makeEmptySchedule(weekday),
+      );
     } catch {
       setError("No se pudo guardar el horario");
     } finally {
@@ -134,7 +171,11 @@ export default function HorariosScreen() {
             value={selectedBusinessId}
             onChange={(e) => setSelectedBusinessId(e.target.value)}
             className="w-56"
+            disabled={loadingBusinesses}
           >
+            <option value="" disabled>
+              Selecciona un negocio
+            </option>
             {businesses.map((b) => (
               <option key={b.id} value={b.id}>
                 {b.name}
@@ -163,7 +204,19 @@ export default function HorariosScreen() {
               aria-label="Seleccionar día"
               value={form.weekday}
               onChange={(e) =>
-                setForm({ ...form, weekday: Number(e.target.value) })
+                setForm(() => {
+                  const weekday = Number(e.target.value);
+                  const existing = schedule.find((row) => row.weekday === weekday);
+                  return existing
+                    ? {
+                        weekday: existing.weekday,
+                        openTime: existing.openTime,
+                        closeTime: existing.closeTime,
+                        breakStart: existing.breakStart ?? "",
+                        breakEnd: existing.breakEnd ?? "",
+                      }
+                    : makeEmptySchedule(weekday);
+                })
               }
             >
               {weekdays.map((day, idx) => (
@@ -214,52 +267,50 @@ export default function HorariosScreen() {
         </form>
       </Card>
 
-      <motion.div
-        initial="hidden"
-        animate="show"
-        variants={{ show: { transition: { staggerChildren: 0.04 } } }}
-        className="space-y-3"
-      >
+      <Card className="space-y-3">
+        <h2 className="text-lg font-semibold text-white">Horarios cargados</h2>
+
         {loadingSchedule ? (
-          [...Array(4)].map((_, i) => (
-            <Card key={i} className="space-y-2">
-              <Skeleton className="h-5 w-1/2" />
-              <Skeleton className="h-4 w-1/3" />
-            </Card>
-          ))
-        ) : sortedSchedule.length === 0 ? (
-          <Card className="text-sm text-slate-300">
-            No hay horarios configurados.
-          </Card>
-        ) : (
-          sortedSchedule.map((row) => (
-            <motion.div
-              key={row.id}
-              variants={fadeUp}
-              className="card flex items-center justify-between gap-3"
-            >
-              <div className="space-y-1">
-                <div className="text-lg font-semibold text-white">
-                  {weekdays[row.weekday]} · {row.openTime} - {row.closeTime}
-                </div>
-                {row.breakStart && row.breakEnd && (
-                  <div className="text-sm text-slate-300">
-                    Pausa: {row.breakStart} - {row.breakEnd}
-                  </div>
-                )}
+          <div className="space-y-2">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="space-y-2">
+                <Skeleton className="h-5 w-1/2" />
+                <Skeleton className="h-4 w-1/3" />
               </div>
-              <Button
-                variant="secondary"
-                className="text-red-200 hover:text-white"
-                onClick={() => deleteRow(row.id)}
+            ))}
+          </div>
+        ) : sortedSchedule.length === 0 ? (
+          <div className="text-sm text-slate-300">No hay horarios configurados.</div>
+        ) : (
+          <div className="space-y-3">
+            {sortedSchedule.map((row) => (
+              <div
+                key={row.id}
+                className="rounded-2xl border border-white/10 bg-white/5 flex items-center justify-between gap-3 px-4 py-3"
               >
-                <Trash2 className="w-4 h-4" />
-                Eliminar
-              </Button>
-            </motion.div>
-          ))
+                <div className="space-y-1">
+                  <div className="text-lg font-semibold text-white">
+                    {weekdays[row.weekday]} · {row.openTime} - {row.closeTime}
+                  </div>
+                  {row.breakStart && row.breakEnd && (
+                    <div className="text-sm text-slate-300">
+                      Pausa: {row.breakStart} - {row.breakEnd}
+                    </div>
+                  )}
+                </div>
+                <Button
+                  variant="secondary"
+                  className="text-red-200 hover:text-white"
+                  onClick={() => deleteRow(row.id)}
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Eliminar
+                </Button>
+              </div>
+            ))}
+          </div>
         )}
-      </motion.div>
+      </Card>
     </div>
   );
 }

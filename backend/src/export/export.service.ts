@@ -9,12 +9,16 @@ export class ExportService {
   private jsonToCsv(data: any[], fields: string[]) {
     if (!data || data.length === 0) return '';
     const header = fields.join(',') + '\n';
-    const rows = data.map(row => 
-      fields.map(field => {
-        const val = row[field] || '';
-        return `"${String(val).replace(/"/g, '""')}"`;
-      }).join(',')
-    ).join('\n');
+    const rows = data
+      .map((row) =>
+        fields
+          .map((field) => {
+            const val = row[field] || '';
+            return `"${String(val).replace(/"/g, '""')}"`;
+          })
+          .join(','),
+      )
+      .join('\n');
     return header + rows;
   }
 
@@ -23,8 +27,8 @@ export class ExportService {
       where: { businessId },
       include: { service: true },
     });
-    
-    const flattened = data.map(b => ({
+
+    const flattened = data.map((b) => ({
       id: b.id,
       date: b.date.toISOString(),
       startTime: b.startTime,
@@ -35,10 +39,22 @@ export class ExportService {
       status: b.status,
     }));
 
-    const csv = this.jsonToCsv(flattened, ['id', 'date', 'startTime', 'endTime', 'clientName', 'clientPhone', 'serviceName', 'status']);
-    
+    const csv = this.jsonToCsv(flattened, [
+      'id',
+      'date',
+      'startTime',
+      'endTime',
+      'clientName',
+      'clientPhone',
+      'serviceName',
+      'status',
+    ]);
+
     res.header('Content-Type', 'text/csv');
-    res.header('Content-Disposition', 'attachment; filename="reservations.csv"');
+    res.header(
+      'Content-Disposition',
+      'attachment; filename="reservations.csv"',
+    );
     res.send(csv);
   }
 
@@ -51,8 +67,12 @@ export class ExportService {
       distinct: ['clientPhone'], // distinct by phone
     });
 
-    const csv = this.jsonToCsv(bookings, ['clientName', 'clientPhone', 'clientEmail']);
-    
+    const csv = this.jsonToCsv(bookings, [
+      'clientName',
+      'clientPhone',
+      'clientEmail',
+    ]);
+
     res.header('Content-Type', 'text/csv');
     res.header('Content-Disposition', 'attachment; filename="clients.csv"');
     res.send(csv);
@@ -63,8 +83,14 @@ export class ExportService {
       where: { businessId },
     });
 
-    const csv = this.jsonToCsv(data, ['id', 'name', 'durationMinutes', 'price', 'isActive']);
-    
+    const csv = this.jsonToCsv(data, [
+      'id',
+      'name',
+      'durationMinutes',
+      'price',
+      'isActive',
+    ]);
+
     res.header('Content-Type', 'text/csv');
     res.header('Content-Disposition', 'attachment; filename="services.csv"');
     res.send(csv);

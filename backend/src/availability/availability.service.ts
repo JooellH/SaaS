@@ -1,6 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { addMinutes, format, parse, isBefore, isAfter, isSameDay } from 'date-fns';
+import {
+  addMinutes,
+  format,
+  parse,
+  isBefore,
+  isAfter,
+  isSameDay,
+} from 'date-fns';
 
 type TimeInterval = {
   start: string;
@@ -11,7 +18,11 @@ type TimeInterval = {
 export class AvailabilityService {
   constructor(private prisma: PrismaService) {}
 
-  async getAvailability(businessId: string, serviceId: string, dateStr: string) {
+  async getAvailability(
+    businessId: string,
+    serviceId: string,
+    dateStr: string,
+  ) {
     const date = parse(dateStr, 'yyyy-MM-dd', new Date());
     const weekday = date.getDay(); // 0-6
 
@@ -75,11 +86,15 @@ export class AvailabilityService {
       let currTime = parse(interval.start, 'HH:mm', date);
       const endTime = parse(interval.end, 'HH:mm', date);
 
-      while (isBefore(addMinutes(currTime, totalDuration), endTime) || currTime.getTime() === endTime.getTime()) { // strict < or <= depends on if end is inclusive
+      while (
+        isBefore(addMinutes(currTime, totalDuration), endTime) ||
+        currTime.getTime() === endTime.getTime()
+      ) {
+        // strict < or <= depends on if end is inclusive
         // Actually, if end is 12:00, and duration is 60m, last slot is 11:00.
         // So curr + duration <= end.
         if (isAfter(addMinutes(currTime, totalDuration), endTime)) {
-           break;
+          break;
         }
 
         const slotStart = format(currTime, 'HH:mm');

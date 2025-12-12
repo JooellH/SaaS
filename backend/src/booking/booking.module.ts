@@ -4,9 +4,10 @@ import { BookingController } from './booking.controller';
 import { PrismaModule } from '../prisma/prisma.module';
 import { WhatsappModule } from '../whatsapp/whatsapp.module';
 import { BillingModule } from '../billing/billing.module';
+import { BusinessModule } from '../business/business.module';
 
 @Module({
-  imports: [PrismaModule, WhatsappModule, BillingModule],
+  imports: [PrismaModule, WhatsappModule, BillingModule, BusinessModule],
   controllers: [BookingController],
   providers: [BookingService],
   exports: [BookingService],

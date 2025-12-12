@@ -23,7 +23,7 @@ export class CronService {
     this.logger.log('Starting reminder cron job');
 
     try {
-      const bookings = await this.bookingService.findUpcomingReminders(24 * 60); 
+      const bookings = await this.bookingService.findUpcomingReminders(24 * 60);
 
       this.logger.log(`Found ${bookings.length} bookings to remind`);
 
@@ -40,7 +40,7 @@ export class CronService {
           this.logger.error(
             `Failed to send reminder for booking ${booking.id}: ${error.message}`,
           );
-          
+
           await this.logsService.createErrorLog({
             businessId: booking.businessId,
             source: 'CRON_REMINDER',
@@ -59,7 +59,7 @@ export class CronService {
       };
     } catch (error) {
       this.logger.error(`Cron job failed: ${error.message}`);
-      
+
       await this.logsService.createErrorLog({
         source: 'CRON_SYSTEM',
         error: error.message,
@@ -73,11 +73,11 @@ export class CronService {
       };
     }
   }
-  
+
   async getLogs(limit: number = 100) {
-      // This might be redundant if we use LogsService directly, 
-      // but the requirement asked for /cron/logs.
-      // We can return system-wide error logs or specific cron logs.
-      return this.logsService.getErrorLogs(undefined); // Pass undefined for system logs
+    // This might be redundant if we use LogsService directly,
+    // but the requirement asked for /cron/logs.
+    // We can return system-wide error logs or specific cron logs.
+    return this.logsService.getErrorLogs(undefined); // Pass undefined for system logs
   }
 }

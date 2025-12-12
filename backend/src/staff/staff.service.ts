@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateStaffDto } from './dto/create-staff.dto';
 import { UpdateStaffDto } from './dto/update-staff.dto';
@@ -16,6 +20,11 @@ export class StaffService {
   ) {}
 
   async create(businessId: string, createStaffDto: CreateStaffDto) {
+    await this.billingService.requirePro(
+      businessId,
+      'Personal está disponible solo en el plan Pro.',
+    );
+
     // Check if staff already exists
     const existing = await this.prisma.staff.findFirst({
       where: {
@@ -25,7 +34,9 @@ export class StaffService {
     });
 
     if (existing) {
-      throw new BadRequestException('Staff with this email already exists in this business');
+      throw new BadRequestException(
+        'Staff with this email already exists in this business',
+      );
     }
 
     const currentCount = await this.prisma.staff.count({
@@ -76,6 +87,11 @@ export class StaffService {
   }
 
   async update(id: string, updateStaffDto: UpdateStaffDto) {
+    const staff = await this.findOne(id);
+    await this.billingService.requirePro(
+      staff.businessId,
+      'Personal está disponible solo en el plan Pro.',
+    );
     return this.prisma.staff.update({
       where: { id },
       data: updateStaffDto,
@@ -83,6 +99,11 @@ export class StaffService {
   }
 
   async remove(id: string) {
+    const staff = await this.findOne(id);
+    await this.billingService.requirePro(
+      staff.businessId,
+      'Personal está disponible solo en el plan Pro.',
+    );
     return this.prisma.staff.delete({
       where: { id },
     });
@@ -98,8 +119,15 @@ export class StaffService {
     }
 
     if (staff.status !== StaffStatus.PENDING) {
-      throw new BadRequestException('La invitación ya fue aceptada o es inválida');
+      throw new BadRequestException(
+        'La invitación ya fue aceptada o es inválida',
+      );
     }
+
+    await this.billingService.requirePro(
+      staff.businessId,
+      'La invitación expiró porque el negocio no tiene plan Pro activo.',
+    );
 
     const existingUser = await this.prisma.user.findUnique({
       where: { email: staff.email },

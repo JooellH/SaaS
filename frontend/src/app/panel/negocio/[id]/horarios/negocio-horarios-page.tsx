@@ -22,27 +22,44 @@ type ScheduleRow = {
 
 const weekdays = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
-const emptySchedule = {
-  weekday: 1,
+const makeEmptySchedule = (weekday = 1) => ({
+  weekday,
   openTime: "09:00",
   closeTime: "18:00",
   breakStart: "",
   breakEnd: "",
-};
+});
 
 export default function NegocioHorariosScreen() {
   const { id: businessId } = useParams<{ id: string }>();
   const [schedule, setSchedule] = useState<ScheduleRow[]>([]);
-  const [form, setForm] = useState(emptySchedule);
+  const [form, setForm] = useState(makeEmptySchedule());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!businessId) return;
+    localStorage.setItem("activeBusinessId", businessId);
+  }, [businessId]);
 
   useEffect(() => {
     const loadSchedule = async () => {
       setLoading(true);
       try {
         const res = await api.get(`/business/${businessId}/schedule`);
-        setSchedule(mapSchedulesFromApi(res.data));
+        const mapped = mapSchedulesFromApi(res.data);
+        setSchedule(mapped);
+        setForm((prev) => {
+          const existing = mapped.find((row) => row.weekday === prev.weekday);
+          if (!existing) return prev;
+          return {
+            weekday: existing.weekday,
+            openTime: existing.openTime,
+            closeTime: existing.closeTime,
+            breakStart: existing.breakStart ?? "",
+            breakEnd: existing.breakEnd ?? "",
+          };
+        });
       } catch {
         setError("No se pudo cargar el horario.");
       } finally {
@@ -70,7 +87,21 @@ export default function NegocioHorariosScreen() {
     try {
       await api.post(`/business/${businessId}/schedule`, parsed.data);
       const res = await api.get(`/business/${businessId}/schedule`);
-      setSchedule(mapSchedulesFromApi(res.data));
+      const mapped = mapSchedulesFromApi(res.data);
+      setSchedule(mapped);
+      const weekday = Number(parsed.data.weekday);
+      const existing = mapped.find((row) => row.weekday === weekday);
+      setForm(
+        existing
+          ? {
+              weekday: existing.weekday,
+              openTime: existing.openTime,
+              closeTime: existing.closeTime,
+              breakStart: existing.breakStart ?? "",
+              breakEnd: existing.breakEnd ?? "",
+            }
+          : makeEmptySchedule(weekday),
+      );
     } catch {
       setError("No se pudo guardar el horario.");
     }
@@ -117,7 +148,19 @@ export default function NegocioHorariosScreen() {
             <Select
               value={form.weekday}
               onChange={(e) =>
-                setForm({ ...form, weekday: Number(e.target.value) })
+                setForm(() => {
+                  const weekday = Number(e.target.value);
+                  const existing = schedule.find((row) => row.weekday === weekday);
+                  return existing
+                    ? {
+                        weekday: existing.weekday,
+                        openTime: existing.openTime,
+                        closeTime: existing.closeTime,
+                        breakStart: existing.breakStart ?? "",
+                        breakEnd: existing.breakEnd ?? "",
+                      }
+                    : makeEmptySchedule(weekday);
+                })
               }
             >
               {weekdays.map((day, idx) => (

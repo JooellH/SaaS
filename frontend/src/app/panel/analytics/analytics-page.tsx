@@ -50,16 +50,38 @@ export default function AnalyticsScreen() {
   const [loadingData, setLoadingData] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const getErrorMessage = (err: unknown, fallback: string) => {
+    const message =
+      typeof err === "object" &&
+      err !== null &&
+      "response" in err &&
+      typeof (err as { response?: { data?: { message?: string } } }).response
+        ?.data?.message === "string"
+        ? (err as { response: { data: { message: string } } }).response.data
+            .message
+        : null;
+    return message || fallback;
+  };
+
   useEffect(() => {
     const loadBusinesses = async () => {
       setLoadingBusinesses(true);
       try {
         const res = await api.get("/business");
-        setBusinesses(res.data);
-        if (res.data.length > 0) {
-          setSelectedBusinessId(res.data[0].id);
-        }
-      } catch {
+        const list = Array.isArray(res.data)
+          ? res.data
+          : (res.data as { data?: unknown }).data;
+        const normalized = Array.isArray(list) ? (list as Business[]) : [];
+
+        setBusinesses(normalized);
+
+        const active = localStorage.getItem("activeBusinessId");
+        const nextId =
+          (active && normalized.some((b) => b.id === active) && active) ||
+          normalized[0]?.id ||
+          "";
+        setSelectedBusinessId(nextId);
+      } catch (err: unknown) {
         setError("No se pudieron cargar los negocios.");
       } finally {
         setLoadingBusinesses(false);
@@ -70,14 +92,20 @@ export default function AnalyticsScreen() {
 
   useEffect(() => {
     if (!selectedBusinessId) return;
+    localStorage.setItem("activeBusinessId", selectedBusinessId);
+  }, [selectedBusinessId]);
+
+  useEffect(() => {
+    if (!selectedBusinessId) return;
     const loadAnalytics = async () => {
       setLoadingData(true);
       setError(null);
       try {
         const res = await api.get(`/analytics/${selectedBusinessId}`);
         setData(res.data);
-      } catch {
-        setError("No se pudieron cargar las estadísticas.");
+      } catch (err: unknown) {
+        setData(null);
+        setError(getErrorMessage(err, "No se pudieron cargar las estadísticas."));
       } finally {
         setLoadingData(false);
       }
@@ -110,6 +138,9 @@ export default function AnalyticsScreen() {
             className="w-56"
             disabled={loadingBusinesses}
           >
+            <option value="" disabled>
+              Selecciona un negocio
+            </option>
             {businesses.map((b) => (
               <option key={b.id} value={b.id}>
                 {b.name}

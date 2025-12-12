@@ -11,6 +11,10 @@ export class AvailabilityController {
     @Query('serviceId') serviceId: string,
     @Query('date') date: string,
   ) {
-    return this.availabilityService.getAvailability(businessId, serviceId, date);
+    return this.availabilityService.getAvailability(
+      businessId,
+      serviceId,
+      date,
+    );
   }
 }

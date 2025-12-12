@@ -17,6 +17,7 @@ import {
   BarChart3,
   CreditCard,
 } from "lucide-react";
+import TrialBanner from "@/components/TrialBanner";
 
 export default function DashboardLayout({
   children,
@@ -123,7 +124,10 @@ export default function DashboardLayout({
           </div>
         </motion.nav>
 
-        <div className="page-shell">{children}</div>
+        <div className="page-shell">
+          <TrialBanner />
+          {children}
+        </div>
       </div>
     </div>
   );

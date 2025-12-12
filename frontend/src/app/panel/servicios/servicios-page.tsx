@@ -3,7 +3,6 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import api from "@/lib/api";
 import { serviceSchema } from "@/lib/validations";
-import { motion } from "framer-motion";
 import { Trash2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
@@ -32,11 +31,6 @@ const emptyService = {
   price: 0,
 };
 
-const fadeUp = {
-  hidden: { opacity: 0, y: 8 },
-  show: { opacity: 1, y: 0 },
-};
-
 export default function ServiciosScreen() {
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [selectedBusinessId, setSelectedBusinessId] = useState<string>("");
@@ -44,18 +38,31 @@ export default function ServiciosScreen() {
   const [form, setForm] = useState(emptyService);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [loadingBusinesses, setLoadingBusinesses] = useState(false);
   const [loadingServices, setLoadingServices] = useState(false);
 
   useEffect(() => {
     const loadBusinesses = async () => {
+      setLoadingBusinesses(true);
       try {
         const res = await api.get("/business");
-        setBusinesses(res.data);
-        if (res.data.length > 0) {
-          setSelectedBusinessId(res.data[0].id);
-        }
+        const list = Array.isArray(res.data)
+          ? res.data
+          : (res.data as { data?: unknown }).data;
+        const normalized = Array.isArray(list) ? (list as Business[]) : [];
+
+        setBusinesses(normalized);
+
+        const active = localStorage.getItem("activeBusinessId");
+        const nextId =
+          (active && normalized.some((b) => b.id === active) && active) ||
+          normalized[0]?.id ||
+          "";
+        setSelectedBusinessId(nextId);
       } catch {
         setError("No se pudieron cargar los negocios");
+      } finally {
+        setLoadingBusinesses(false);
       }
     };
     loadBusinesses();
@@ -63,11 +70,19 @@ export default function ServiciosScreen() {
 
   useEffect(() => {
     if (!selectedBusinessId) return;
+    localStorage.setItem("activeBusinessId", selectedBusinessId);
+  }, [selectedBusinessId]);
+
+  useEffect(() => {
+    if (!selectedBusinessId) return;
     const loadServices = async () => {
       setLoadingServices(true);
       try {
         const res = await api.get(`/services/${selectedBusinessId}`);
-        setServices(res.data);
+        const list = Array.isArray(res.data)
+          ? res.data
+          : (res.data as { data?: unknown }).data;
+        setServices(Array.isArray(list) ? (list as Service[]) : []);
       } catch {
         setError("No se pudieron cargar los servicios");
       } finally {
@@ -95,7 +110,10 @@ export default function ServiciosScreen() {
       await api.post("/services", parsed.data);
       setForm(emptyService);
       const res = await api.get(`/services/${selectedBusinessId}`);
-      setServices(res.data);
+      const list = Array.isArray(res.data)
+        ? res.data
+        : (res.data as { data?: unknown }).data;
+      setServices(Array.isArray(list) ? (list as Service[]) : []);
     } catch {
       setError("No se pudo guardar el servicio");
     } finally {
@@ -130,7 +148,11 @@ export default function ServiciosScreen() {
             value={selectedBusinessId}
             onChange={(e) => setSelectedBusinessId(e.target.value)}
             className="w-56"
+            disabled={loadingBusinesses}
           >
+            <option value="" disabled>
+              Selecciona un negocio
+            </option>
             {businesses.map((b) => (
               <option key={b.id} value={b.id}>
                 {b.name}
@@ -217,49 +239,48 @@ export default function ServiciosScreen() {
         </form>
       </Card>
 
-      <motion.div
-        initial="hidden"
-        animate="show"
-        variants={{ show: { transition: { staggerChildren: 0.04 } } }}
-        className="space-y-3"
-      >
+      <Card className="space-y-3">
+        <h2 className="text-lg font-semibold text-white">Servicios cargados</h2>
         {loadingServices ? (
-          [...Array(3)].map((_, i) => (
-            <Card key={i} className="space-y-2">
-              <Skeleton className="h-5 w-1/2" />
-              <Skeleton className="h-4 w-3/4" />
-            </Card>
-          ))
-        ) : sortedServices.length === 0 ? (
-          <Card className="text-sm text-slate-300">No hay servicios aún.</Card>
-        ) : (
-          sortedServices.map((service) => (
-            <motion.div
-              key={service.id}
-              variants={fadeUp}
-              className="card flex items-center justify-between gap-3"
-            >
-              <div className="space-y-1">
-                <div className="text-lg font-semibold text-white">
-                  {service.name}
-                </div>
-                <div className="text-sm text-slate-300">
-                  {service.durationMinutes} min · {service.cleaningTimeMinutes} min limpieza · $
-                  {service.price}
-                </div>
+          <div className="space-y-2">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="space-y-2">
+                <Skeleton className="h-5 w-1/2" />
+                <Skeleton className="h-4 w-3/4" />
               </div>
-              <Button
-                variant="secondary"
-                className="text-red-200 hover:text-white"
-                onClick={() => deleteService(service.id)}
+            ))}
+          </div>
+        ) : sortedServices.length === 0 ? (
+          <div className="text-sm text-slate-300">No hay servicios aún.</div>
+        ) : (
+          <div className="space-y-3">
+            {sortedServices.map((service) => (
+              <div
+                key={service.id}
+                className="rounded-2xl border border-white/10 bg-white/5 flex items-center justify-between gap-3 px-4 py-3"
               >
-                <Trash2 className="w-4 h-4" />
-                Eliminar
-              </Button>
-            </motion.div>
-          ))
+                <div className="space-y-1">
+                  <div className="text-lg font-semibold text-white">
+                    {service.name}
+                  </div>
+                  <div className="text-sm text-slate-300">
+                    {service.durationMinutes} min ·{" "}
+                    {service.cleaningTimeMinutes} min limpieza · ${service.price}
+                  </div>
+                </div>
+                <Button
+                  variant="secondary"
+                  className="text-red-200 hover:text-white"
+                  onClick={() => deleteService(service.id)}
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Eliminar
+                </Button>
+              </div>
+            ))}
+          </div>
         )}
-      </motion.div>
+      </Card>
     </div>
   );
 }

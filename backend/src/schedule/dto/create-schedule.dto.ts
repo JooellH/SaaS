@@ -1,4 +1,11 @@
-import { IsBoolean, IsInt, IsNotEmpty, IsArray, ValidateNested, IsOptional } from 'class-validator';
+import {
+  IsBoolean,
+  IsInt,
+  IsNotEmpty,
+  IsArray,
+  ValidateNested,
+  IsOptional,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 class IntervalDto {

@@ -12,7 +12,7 @@ export class LogsController {
     // TODO: Verify user is owner of businessId
     const actions = await this.logsService.getActionLogs(businessId);
     const errors = await this.logsService.getErrorLogs(businessId);
-    
+
     return {
       actions,
       errors,
