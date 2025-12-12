@@ -41,6 +41,7 @@ export default function PersonalScreen() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [origin, setOrigin] = useState<string>("");
+  const [lastInviteToken, setLastInviteToken] = useState<string | null>(null);
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -97,6 +98,7 @@ export default function PersonalScreen() {
     setSaving(true);
     setError(null);
     setSuccess(null);
+    setLastInviteToken(null);
 
     try {
       const res = await api.post(
@@ -108,6 +110,7 @@ export default function PersonalScreen() {
         },
       );
       setStaff((prev) => [res.data, ...prev]);
+      setLastInviteToken(res.data?.inviteToken || null);
       setForm({ name: "", email: "", phone: "" });
       setSuccess("Invitación creada. Compartí el link con tu equipo.");
     } catch (err: unknown) {
@@ -183,6 +186,30 @@ export default function PersonalScreen() {
 
       {error && <FormFeedback variant="error" message={error} />}
       {success && <FormFeedback variant="success" message={success} />}
+
+      {lastInviteToken && (
+        <Card className="max-w-3xl space-y-3">
+          <div className="text-sm text-slate-200">
+            Link de invitación (compartilo con la persona):
+          </div>
+          <div className="flex flex-col md:flex-row gap-2">
+            <Input
+              readOnly
+              value={`${origin}/aceptar-invitacion?token=${lastInviteToken}`}
+              onFocus={(e) => e.currentTarget.select()}
+            />
+            <Button
+              type="button"
+              variant="secondary"
+              className="h-12"
+              onClick={() => copyInviteLink(lastInviteToken)}
+            >
+              <Copy className="w-4 h-4" />
+              Copiar
+            </Button>
+          </div>
+        </Card>
+      )}
 
       <Card className="space-y-4 max-w-3xl">
         <div className="flex items-center gap-3">

@@ -62,11 +62,12 @@ export class PublicService {
         weekday: s.weekday,
         isActive: s.isActive,
         intervals,
-        openTime: first?.start || null,
-        closeTime: last?.end || null,
+        openTime: first?.start || "-",
+        closeTime: last?.end || "-",
       };
     });
 
-    return { ...business, schedules };
+    // Keep compatibility with older frontend expecting `schedule`
+    return { ...business, schedule: schedules, schedules };
   }
 }

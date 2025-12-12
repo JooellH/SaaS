@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import api from "@/lib/api";
 import { scheduleSchema } from "@/lib/validations";
+import { mapSchedulesFromApi } from "@/lib/schedule";
 import { motion } from "framer-motion";
 import { Trash2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -71,7 +72,7 @@ export default function HorariosScreen() {
       setLoadingSchedule(true);
       try {
         const res = await api.get(`/business/${selectedBusinessId}/schedule`);
-        setSchedule(res.data);
+        setSchedule(mapSchedulesFromApi(res.data));
       } catch {
         setError("No se pudo cargar la agenda");
       } finally {
@@ -87,7 +88,6 @@ export default function HorariosScreen() {
     setSaving(true);
     const parsed = scheduleSchema.safeParse({
       ...form,
-      businessId: selectedBusinessId,
       breakStart: form.breakStart || undefined,
       breakEnd: form.breakEnd || undefined,
     });
@@ -99,7 +99,7 @@ export default function HorariosScreen() {
     try {
       await api.post(`/business/${selectedBusinessId}/schedule`, parsed.data);
       const res = await api.get(`/business/${selectedBusinessId}/schedule`);
-      setSchedule(res.data);
+      setSchedule(mapSchedulesFromApi(res.data));
       setForm(emptySchedule);
     } catch {
       setError("No se pudo guardar el horario");

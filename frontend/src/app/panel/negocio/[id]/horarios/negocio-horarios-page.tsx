@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import api from "@/lib/api";
 import { scheduleSchema } from "@/lib/validations";
+import { mapSchedulesFromApi } from "@/lib/schedule";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
@@ -41,7 +42,7 @@ export default function NegocioHorariosScreen() {
       setLoading(true);
       try {
         const res = await api.get(`/business/${businessId}/schedule`);
-        setSchedule(res.data);
+        setSchedule(mapSchedulesFromApi(res.data));
       } catch {
         setError("No se pudo cargar el horario.");
       } finally {
@@ -57,7 +58,6 @@ export default function NegocioHorariosScreen() {
 
     const parsed = scheduleSchema.safeParse({
       ...form,
-      businessId,
       breakStart: form.breakStart || undefined,
       breakEnd: form.breakEnd || undefined,
     });
@@ -70,7 +70,7 @@ export default function NegocioHorariosScreen() {
     try {
       await api.post(`/business/${businessId}/schedule`, parsed.data);
       const res = await api.get(`/business/${businessId}/schedule`);
-      setSchedule(res.data);
+      setSchedule(mapSchedulesFromApi(res.data));
     } catch {
       setError("No se pudo guardar el horario.");
     }
