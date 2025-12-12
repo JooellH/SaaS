@@ -141,12 +141,12 @@ export default function NegocioReservasScreen() {
     } catch (err: unknown) {
       const message =
         typeof err === "object" &&
-        err !== null &&
-        "response" in err &&
-        typeof (err as { response?: { data?: { message?: string } } }).response
-          ?.data?.message === "string"
+          err !== null &&
+          "response" in err &&
+          typeof (err as { response?: { data?: { message?: string } } }).response
+            ?.data?.message === "string"
           ? (err as { response: { data: { message: string } } }).response.data
-              .message
+            .message
           : "No se pudo crear la reserva.";
       setError(message);
     }
@@ -219,7 +219,7 @@ export default function NegocioReservasScreen() {
           className="form-grid md:grid-cols-4"
         >
           <div className="space-y-2 md:col-span-2">
-            <label className="text-sm text-slate-200">Servicio</label>
+            <label className="block text-sm text-slate-200">Servicio</label>
             <Select
               value={form.serviceId}
               onChange={(e) => setForm({ ...form, serviceId: e.target.value })}
@@ -233,7 +233,7 @@ export default function NegocioReservasScreen() {
             </Select>
           </div>
           <div className="space-y-2">
-            <label className="text-sm text-slate-200">Fecha</label>
+            <label className="block text-sm text-slate-200">Fecha</label>
             <Input
               type="date"
               value={form.date}
@@ -242,7 +242,7 @@ export default function NegocioReservasScreen() {
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm text-slate-200">Hora</label>
+            <label className="block text-sm text-slate-200">Hora</label>
             <Select
               value={form.startTime}
               onChange={(e) => setForm({ ...form, startTime: e.target.value })}
@@ -257,7 +257,7 @@ export default function NegocioReservasScreen() {
             </Select>
           </div>
           <div className="space-y-2 md:col-span-2">
-            <label className="text-sm text-slate-200">Nombre cliente</label>
+            <label className="block text-sm text-slate-200">Nombre cliente</label>
             <Input
               value={form.clientName}
               onChange={(e) => setForm({ ...form, clientName: e.target.value })}
@@ -265,7 +265,7 @@ export default function NegocioReservasScreen() {
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm text-slate-200">Teléfono</label>
+            <label className="block text-sm text-slate-200">Teléfono</label>
             <Input
               value={form.clientPhone}
               onChange={(e) =>
@@ -274,7 +274,7 @@ export default function NegocioReservasScreen() {
               required
             />
           </div>
-          <div className="form-actions flex items-end">
+          <div className="flex items-end">
             <Button type="submit" className="w-full h-12" disabled={slots.length === 0}>
               Crear reserva
             </Button>
@@ -356,7 +356,7 @@ export default function NegocioReservasScreen() {
             className="form-grid md:grid-cols-3"
           >
             <div className="space-y-2">
-              <label className="text-sm text-slate-200">Fecha</label>
+              <label className="block text-sm text-slate-200">Fecha</label>
               <Input
                 type="date"
                 value={reschedule.date}
@@ -371,7 +371,7 @@ export default function NegocioReservasScreen() {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm text-slate-200">Hora</label>
+              <label className="block text-sm text-slate-200">Hora</label>
               <Select
                 value={reschedule.startTime}
                 onChange={(e) =>

@@ -77,7 +77,7 @@ export default function InicioSesionPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="input-field pl-11 pr-11 input-compact"
+                className="input-field pl-11 input-compact"
                 placeholder="demo@reservapro.com"
               />
             </div>
@@ -101,7 +101,7 @@ export default function InicioSesionPage() {
               <button
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hover:text-white"
+                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md border-0 bg-transparent p-1 text-slate-400 hover:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60 transition-colors"
               >
                 {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </button>

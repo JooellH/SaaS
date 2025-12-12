@@ -96,10 +96,10 @@ export default function NegocioServiciosScreen() {
         </div>
         <form
           onSubmit={handleSubmit}
-          className="form-grid lg:grid-cols-6"
+          className="form-grid md:grid-cols-6"
         >
-          <div className="lg:col-span-2 space-y-2">
-            <label className="text-sm text-slate-200">Nombre</label>
+          <div className="md:col-span-2 space-y-2">
+            <label className="block text-sm text-slate-200">Nombre</label>
             <Input
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -107,7 +107,7 @@ export default function NegocioServiciosScreen() {
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm text-slate-200">Duración (min)</label>
+            <label className="block text-sm text-slate-200">Duración (min)</label>
             <Input
               type="number"
               value={form.durationMinutes}
@@ -119,7 +119,7 @@ export default function NegocioServiciosScreen() {
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm text-slate-200">Limpieza (min)</label>
+            <label className="block text-sm text-slate-200">Limpieza (min)</label>
             <Input
               type="number"
               value={form.cleaningTimeMinutes}
@@ -134,7 +134,7 @@ export default function NegocioServiciosScreen() {
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm text-slate-200">Precio</label>
+            <label className="block text-sm text-slate-200">Precio</label>
             <Input
               type="number"
               value={form.price}
@@ -143,7 +143,7 @@ export default function NegocioServiciosScreen() {
               min={0}
             />
           </div>
-          <div className="form-actions flex items-end">
+          <div className="flex items-end">
             <Button type="submit" className="w-full h-12">
               Guardar
             </Button>

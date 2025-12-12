@@ -11,8 +11,13 @@ export const registerSchema = loginSchema.extend({
 
 export const businessSchema = z.object({
   name: z.string().min(2),
-  slug: z.string().min(1),
+  slug: z.string().min(1).regex(/^[a-z0-9-]+$/),
   timezone: z.string().min(1),
+  phoneNumber: z.string().optional(),
+  whatsappToken: z.string().optional(),
+  logoUrl: z.string().url().optional(),
+  brandColor: z.string().regex(/^#?[0-9a-fA-F]{6}$/).optional(),
+  bannerUrl: z.string().url().optional(),
 });
 
 export const serviceSchema = z.object({

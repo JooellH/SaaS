@@ -20,6 +20,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
 import { BillingModule } from './billing/billing.module';
 import { RateLimitMiddleware } from './common/middleware/rate-limit.middleware';
 import { SecurityMiddleware } from './common/middleware/security.middleware';
+import { ScheduleModule as NestScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { SecurityMiddleware } from './common/middleware/security.middleware';
       isGlobal: true,
       envFilePath: ['.env.local', '.env'],
     }),
+    NestScheduleModule.forRoot(),
     PrismaModule,
     AuthModule,
     UserModule,
@@ -54,5 +56,3 @@ export class AppModule implements NestModule {
       .forRoutes('*');
   }
 }
-
-

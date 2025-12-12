@@ -27,7 +27,7 @@ export class BusinessController {
   @UseGuards(AuthGuard('jwt'))
   @Get()
   findAll(@Request() req) {
-    return this.businessService.findAll(req.user.userId);
+    return this.businessService.findAll(req.user.userId, req.user.email);
   }
 
   @Get(':slug/public')

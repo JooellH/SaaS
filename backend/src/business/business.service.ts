@@ -6,6 +6,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateBusinessDto } from './dto/create-business.dto';
 import { UpdateBusinessDto } from './dto/update-business.dto';
+import { StaffStatus } from '@prisma/client';
 
 @Injectable()
 export class BusinessService {
@@ -17,18 +18,46 @@ export class BusinessService {
     });
     if (existing) throw new ConflictException('Slug already taken');
 
-    return this.prisma.business.create({
-      data: {
-        ...dto,
-        ownerId: userId,
-      },
+    const basicPlan = await this.prisma.plan.findUnique({
+      where: { id: 'plan_basic' },
     });
+
+    const data: any = {
+      ...dto,
+      ownerId: userId,
+    };
+
+    if (basicPlan) {
+      data.subscription = {
+        create: {
+          planId: basicPlan.id,
+          status: 'ACTIVE',
+          startDate: new Date(),
+        },
+      };
+    }
+
+    return this.prisma.business.create({ data });
   }
 
-  async findAll(userId: string) {
-    return this.prisma.business.findMany({
-      where: { ownerId: userId },
-    });
+  async findAll(userId: string, email?: string) {
+    const where = email
+      ? {
+          OR: [
+            { ownerId: userId },
+            {
+              staff: {
+                some: {
+                  email,
+                  status: StaffStatus.ACTIVE,
+                },
+              },
+            },
+          ],
+        }
+      : { ownerId: userId };
+
+    return this.prisma.business.findMany({ where });
   }
 
   async findOne(id: string) {

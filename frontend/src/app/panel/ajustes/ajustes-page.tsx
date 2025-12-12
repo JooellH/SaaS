@@ -17,6 +17,11 @@ interface Business {
   name: string;
   slug: string;
   timezone: string;
+  phoneNumber?: string | null;
+  whatsappToken?: string | null;
+  logoUrl?: string | null;
+  brandColor?: string | null;
+  bannerUrl?: string | null;
 }
 
 const fadeUp = {
@@ -70,10 +75,24 @@ export default function AjustesScreen() {
     setError(null);
     setSuccess(null);
     setSaving(true);
+
+    const rawBrand = form.brandColor?.trim();
+    const normalizedBrandColor =
+      rawBrand && rawBrand.length > 0
+        ? rawBrand.startsWith("#")
+          ? rawBrand
+          : `#${rawBrand}`
+        : undefined;
+
     const parsed = businessSchema.safeParse({
       name: form.name,
       slug: form.slug,
       timezone: form.timezone,
+      phoneNumber: form.phoneNumber?.trim() || undefined,
+      whatsappToken: form.whatsappToken?.trim() || undefined,
+      logoUrl: form.logoUrl?.trim() || undefined,
+      brandColor: normalizedBrandColor,
+      bannerUrl: form.bannerUrl?.trim() || undefined,
     });
     if (!parsed.success) {
       setError("Revisa los campos del negocio.");
@@ -129,63 +148,143 @@ export default function AjustesScreen() {
       )}
 
       {form && !loadingBusiness && (
-        <motion.form
-          initial="hidden"
-          animate="show"
-          variants={{ show: { transition: { staggerChildren: 0.05 } } }}
-          onSubmit={handleSubmit}
-          className="card space-y-6 max-w-xl"
-        >
-          <motion.div variants={fadeUp} className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-indigo-300" />
-            <span className="chip">Datos del negocio</span>
-          </motion.div>
-          <div className="form-grid md:grid-cols-2">
-            <motion.div variants={fadeUp} className="space-y-2">
-              <label className="block text-sm text-slate-200">Nombre</label>
-              <Input
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-              />
+        <Card className="max-w-xl">
+          <motion.form
+            initial="hidden"
+            animate="show"
+            variants={{ show: { transition: { staggerChildren: 0.05 } } }}
+            onSubmit={handleSubmit}
+            className="space-y-6"
+          >
+            <motion.div variants={fadeUp} className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-indigo-300" />
+              <span className="chip">Datos del negocio</span>
             </motion.div>
-            <motion.div variants={fadeUp} className="space-y-2">
-              <label className="block text-sm text-slate-200">Slug</label>
-              <Input
-                value={form.slug}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""),
-                  })
-                }
-              />
-            </motion.div>
-            <motion.div variants={fadeUp} className="space-y-2 md:col-span-2">
-              <label className="block text-sm text-slate-200">Zona horaria</label>
-              <Select
-                aria-label="Zona horaria"
-                className="w-full"
-                value={form.timezone}
-                onChange={(e) => setForm({ ...form, timezone: e.target.value })}
-              >
-                <option value="America/Argentina/Buenos_Aires">
-                  America/Argentina/Buenos_Aires
-                </option>
-                <option value="America/Mexico_City">America/Mexico_City</option>
-                <option value="America/Bogota">America/Bogota</option>
-              </Select>
-            </motion.div>
-            <motion.div
-              variants={fadeUp}
-              className="form-actions flex items-end md:col-span-2"
-            >
-              <Button type="submit" className="w-full h-12 md:w-auto" disabled={saving}>
-                <Save className="w-4 h-4" />
-                {saving ? "Guardando..." : "Guardar cambios"}
-              </Button>
-            </motion.div>
-          </div>
-        </motion.form>
+
+            <div className="space-y-8">
+              <div className="form-grid md:grid-cols-2">
+                <motion.div variants={fadeUp} className="space-y-2">
+                  <label className="block text-sm text-slate-200">Nombre</label>
+                  <Input
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  />
+                </motion.div>
+                <motion.div variants={fadeUp} className="space-y-2">
+                  <label className="block text-sm text-slate-200">Slug</label>
+                  <Input
+                    value={form.slug}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""),
+                      })
+                    }
+                  />
+                </motion.div>
+                <motion.div variants={fadeUp} className="space-y-2 md:col-span-2">
+                  <label className="block text-sm text-slate-200">Zona horaria</label>
+                  <Select
+                    aria-label="Zona horaria"
+                    className="w-full"
+                    value={form.timezone}
+                    onChange={(e) => setForm({ ...form, timezone: e.target.value })}
+                  >
+                    <option value="America/Argentina/Buenos_Aires">
+                      America/Argentina/Buenos_Aires
+                    </option>
+                    <option value="America/Mexico_City">America/Mexico_City</option>
+                    <option value="America/Bogota">America/Bogota</option>
+                  </Select>
+                </motion.div>
+              </div>
+
+              <motion.div variants={fadeUp} className="flex items-center gap-2">
+                <span className="chip">Branding</span>
+                <p className="text-xs text-slate-400">
+                  Se muestra en el turnero público.
+                </p>
+              </motion.div>
+              <div className="form-grid md:grid-cols-2">
+                <motion.div variants={fadeUp} className="space-y-2 md:col-span-2">
+                  <label className="block text-sm text-slate-200">Logo (URL)</label>
+                  <Input
+                    type="url"
+                    placeholder="https://.../logo.png"
+                    value={form.logoUrl ?? ""}
+                    onChange={(e) =>
+                      setForm({ ...form, logoUrl: e.target.value })
+                    }
+                  />
+                </motion.div>
+                <motion.div variants={fadeUp} className="space-y-2">
+                  <label className="block text-sm text-slate-200">Color de marca</label>
+                  <Input
+                    type="text"
+                    placeholder="#7c3aed"
+                    value={form.brandColor ?? ""}
+                    onChange={(e) =>
+                      setForm({ ...form, brandColor: e.target.value })
+                    }
+                  />
+                </motion.div>
+                <motion.div variants={fadeUp} className="space-y-2 md:col-span-2">
+                  <label className="block text-sm text-slate-200">Banner (URL)</label>
+                  <Input
+                    type="url"
+                    placeholder="https://.../banner.jpg"
+                    value={form.bannerUrl ?? ""}
+                    onChange={(e) =>
+                      setForm({ ...form, bannerUrl: e.target.value })
+                    }
+                  />
+                </motion.div>
+              </div>
+
+              <motion.div variants={fadeUp} className="flex items-center gap-2">
+                <span className="chip">WhatsApp</span>
+                <p className="text-xs text-slate-400">
+                  Para confirmaciones y recordatorios automáticos.
+                </p>
+              </motion.div>
+              <div className="form-grid md:grid-cols-2">
+                <motion.div variants={fadeUp} className="space-y-2">
+                  <label className="block text-sm text-slate-200">
+                    Phone Number ID
+                  </label>
+                  <Input
+                    type="text"
+                    placeholder="ID de Meta WhatsApp"
+                    value={form.phoneNumber ?? ""}
+                    onChange={(e) =>
+                      setForm({ ...form, phoneNumber: e.target.value })
+                    }
+                  />
+                </motion.div>
+                <motion.div variants={fadeUp} className="space-y-2 md:col-span-2">
+                  <label className="block text-sm text-slate-200">
+                    Token de WhatsApp Cloud API
+                  </label>
+                  <Input
+                    type="password"
+                    placeholder="EAAJ..."
+                    value={form.whatsappToken ?? ""}
+                    onChange={(e) =>
+                      setForm({ ...form, whatsappToken: e.target.value })
+                    }
+                  />
+                </motion.div>
+              </div>
+
+              <motion.div variants={fadeUp} className="flex items-end">
+                <Button type="submit" className="w-full h-12" disabled={saving}>
+                  <Save className="w-4 h-4" />
+                  {saving ? "Guardando..." : "Guardar cambios"}
+                </Button>
+              </motion.div>
+            </div>
+          </motion.form>
+        </Card>
       )}
     </div>
   );

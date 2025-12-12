@@ -204,7 +204,7 @@ export default function ServiciosScreen() {
               min={0}
             />
           </div>
-          <div className="form-actions flex items-end">
+          <div className="flex items-end">
             <Button
               type="submit"
               className="w-full h-12"

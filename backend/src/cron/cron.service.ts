@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { Cron } from '@nestjs/schedule';
 import { BookingService } from '../booking/booking.service';
 import { WhatsappService } from '../whatsapp/whatsapp.service';
 import { LogsService } from '../logs/logs.service';
@@ -13,14 +14,15 @@ export class CronService {
     private logsService: LogsService,
   ) {}
 
+  @Cron('*/15 * * * *')
+  handleRemindersCron() {
+    return this.sendUpcomingReminders();
+  }
+
   async sendUpcomingReminders() {
     this.logger.log('Starting reminder cron job');
 
     try {
-      // Find bookings in the next 24 hours (example) or configurable
-      // Assuming findUpcomingReminders exists in BookingService. 
-      // If not, we might need to implement it or use a different method.
-      // For now, I'll assume it returns bookings that haven't been reminded yet.
       const bookings = await this.bookingService.findUpcomingReminders(24 * 60); 
 
       this.logger.log(`Found ${bookings.length} bookings to remind`);
@@ -79,4 +81,3 @@ export class CronService {
       return this.logsService.getErrorLogs(undefined); // Pass undefined for system logs
   }
 }
-

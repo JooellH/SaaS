@@ -17,7 +17,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es">
+    <html lang="es" suppressHydrationWarning>
       <body className={`${inter.className} bg-[radial-gradient(circle_at_20%_20%,rgba(124,58,237,0.08),transparent_26%),radial-gradient(circle_at_80%_0%,rgba(34,211,238,0.08),transparent_30%),radial-gradient(circle_at_60%_80%,rgba(59,130,246,0.08),transparent_28%),#0b1021] text-slate-50`}>
         <AuthProvider>{children}</AuthProvider>
       </body>

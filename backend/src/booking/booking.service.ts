@@ -6,7 +6,15 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { RescheduleBookingDto } from './dto/reschedule-booking.dto';
-import { addMinutes, parse, format } from 'date-fns';
+import {
+  addMinutes,
+  parse,
+  format,
+  startOfMonth,
+  endOfMonth,
+} from 'date-fns';
+import { WhatsappService } from '../whatsapp/whatsapp.service';
+import { BillingService } from '../billing/billing.service';
 
 type TimeInterval = {
   start: string;
@@ -15,7 +23,11 @@ type TimeInterval = {
 
 @Injectable()
 export class BookingService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private whatsappService: WhatsappService,
+    private billingService: BillingService,
+  ) {}
 
   async create(dto: CreateBookingDto) {
     // Get service to calculate end time
@@ -23,6 +35,8 @@ export class BookingService {
       where: { id: dto.serviceId },
     });
     if (!service) throw new NotFoundException('Service not found');
+
+    await this.ensureMonthlyLimit(dto.businessId, dto.date);
 
     // Check availability
     const isAvailable = await this.checkAvailability(
@@ -54,6 +68,12 @@ export class BookingService {
       },
     });
 
+    try {
+      await this.whatsappService.sendConfirmation(booking.id);
+    } catch {
+      // Do not fail booking on WhatsApp errors
+    }
+
     return booking;
   }
 
@@ -80,10 +100,18 @@ export class BookingService {
   }
 
   async cancel(id: string) {
-    return this.prisma.booking.update({
+    const updated = await this.prisma.booking.update({
       where: { id },
       data: { status: 'cancelled' },
     });
+
+    try {
+      await this.whatsappService.sendCancellation(id);
+    } catch {
+      // ignore WhatsApp errors
+    }
+
+    return updated;
   }
 
   async reschedule(id: string, dto: RescheduleBookingDto) {
@@ -111,7 +139,7 @@ export class BookingService {
     const endDate = addMinutes(startDate, service.durationMinutes);
     const endTime = format(endDate, 'HH:mm');
 
-    return this.prisma.booking.update({
+    const updated = await this.prisma.booking.update({
       where: { id },
       data: {
         date: new Date(dto.date),
@@ -119,6 +147,14 @@ export class BookingService {
         endTime,
       },
     });
+
+    try {
+      await this.whatsappService.sendConfirmation(id);
+    } catch {
+      // ignore WhatsApp errors
+    }
+
+    return updated;
   }
 
   async checkAvailability(
@@ -270,12 +306,46 @@ export class BookingService {
       .filter((i): i is TimeInterval => Boolean(i));
   }
 
+  private async ensureMonthlyLimit(businessId: string, date: string) {
+    const dateObj = new Date(date);
+    const monthStart = startOfMonth(dateObj);
+    const monthEnd = endOfMonth(dateObj);
+
+    const currentCount = await this.prisma.booking.count({
+      where: {
+        businessId,
+        date: { gte: monthStart, lte: monthEnd },
+        status: { not: 'cancelled' },
+      },
+    });
+
+    const canAdd = await this.billingService.checkLimit(
+      businessId,
+      'maxBookingsPerMonth',
+      currentCount,
+    );
+
+    if (!canAdd) {
+      throw new BadRequestException(
+        'Has alcanzado el límite mensual de reservas de tu plan. Actualiza tu plan para recibir más reservas.',
+      );
+    }
+  }
+
   async findUpcomingReminders(minutesAhead: number) {
     const now = new Date();
     const targetTime = addMinutes(now, minutesAhead);
 
     const bookings = await this.prisma.booking.findMany({
-      where: { status: 'confirmed' },
+      where: {
+        status: 'confirmed',
+        messageLogs: {
+          none: {
+            type: 'reminder',
+            status: 'sent',
+          },
+        },
+      },
       include: { service: true, business: true },
     });
 

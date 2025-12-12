@@ -14,6 +14,9 @@ export class PublicService {
         slug: true,
         phoneNumber: true,
         timezone: true,
+        logoUrl: true,
+        brandColor: true,
+        bannerUrl: true,
         services: {
           select: {
             id: true,

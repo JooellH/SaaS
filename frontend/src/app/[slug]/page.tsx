@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { useParams } from "next/navigation";
 import api from "@/lib/api";
 import { bookingSchema, type BookingForm } from "@/lib/validations";
@@ -31,6 +31,9 @@ interface Business {
   name: string;
   slug: string;
   timezone: string;
+  logoUrl?: string | null;
+  brandColor?: string | null;
+  bannerUrl?: string | null;
   services: Service[];
   schedule: ScheduleRow[];
 }
@@ -105,7 +108,14 @@ export default function PublicBookingPage() {
         ...parsed.data,
         businessId: business.id,
       });
-      setSuccess("Reserva creada. Te confirmaremos en breve.");
+      const svcName =
+        business.services.find((s) => s.id === parsed.data.serviceId)?.name ||
+        "servicio";
+      const [year, month, day] = parsed.data.date.split("-");
+      const formattedDate = `${day}/${month}/${year}`;
+      setSuccess(
+        `Reserva confirmada para ${svcName} el ${formattedDate} a las ${parsed.data.startTime}. Te vamos a escribir por WhatsApp.`,
+      );
     } catch (err: unknown) {
       const message =
         typeof err === "object" &&
@@ -151,8 +161,29 @@ export default function PublicBookingPage() {
     );
   }
 
+  const rawBrand = business.brandColor?.trim();
+  const brandColor =
+    rawBrand && rawBrand.length > 0
+      ? rawBrand.startsWith("#")
+        ? rawBrand
+        : `#${rawBrand}`
+      : "#7c3aed";
+
+  const brandStyle: CSSProperties = {
+    ["--brand-color" as any]: brandColor,
+  };
+
+  const brandBorderColor =
+    brandColor.length === 7 ? `${brandColor}55` : brandColor;
+
   return (
-    <div className="relative min-h-screen">
+    <div className="relative min-h-screen" style={brandStyle}>
+      {business.bannerUrl && (
+        <div
+          className="absolute inset-0 -z-20 bg-cover bg-center opacity-15"
+          style={{ backgroundImage: `url(${business.bannerUrl})` }}
+        />
+      )}
       <div className="absolute inset-0 -z-10 opacity-70 blur-3xl">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(124,58,237,0.16),transparent_35%),radial-gradient(circle_at_80%_0%,rgba(34,211,238,0.16),transparent_30%),radial-gradient(circle_at_60%_80%,rgba(59,130,246,0.18),transparent_32%)]" />
       </div>
@@ -164,8 +195,19 @@ export default function PublicBookingPage() {
       >
         {/* Hero */}
         <div className="space-y-3">
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-semibold text-indigo-200">
-            <Sparkles className="w-4 h-4" />
+          <div
+            className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-semibold"
+            style={{ color: brandColor }}
+          >
+            {business.logoUrl ? (
+              <img
+                src={business.logoUrl}
+                alt={`${business.name} logo`}
+                className="w-4 h-4 rounded object-contain"
+              />
+            ) : (
+              <Sparkles className="w-4 h-4" />
+            )}
             <span>Reserva Pro · Landing Pública</span>
           </div>
           <h1 className="text-4xl md:text-5xl font-semibold text-white">
@@ -176,7 +218,9 @@ export default function PublicBookingPage() {
           </p>
           <div className="grid md:grid-cols-2 gap-4">
             <Card>
-              <p className="text-sm text-indigo-200">Agenda tu turno</p>
+              <p className="text-sm" style={{ color: brandColor }}>
+                Agenda tu turno
+              </p>
               <h3 className="text-xl font-semibold text-white">
                 Elegí el servicio y horario perfecto
               </h3>
@@ -186,7 +230,9 @@ export default function PublicBookingPage() {
               </p>
             </Card>
             <Card>
-              <p className="text-sm text-indigo-200">Servicios destacados</p>
+              <p className="text-sm" style={{ color: brandColor }}>
+                Servicios destacados
+              </p>
               <ul className="space-y-2 text-slate-100 text-sm">
                 {business.services.slice(0, 3).map((svc) => (
                   <li key={svc.id} className="flex items-center gap-2">
@@ -207,6 +253,7 @@ export default function PublicBookingPage() {
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           className="card space-y-6"
+          style={{ borderColor: brandBorderColor }}
         >
           <div>
             <h2 className="text-2xl font-semibold text-white">
@@ -250,7 +297,14 @@ export default function PublicBookingPage() {
                 aria-label="Fecha"
                 type="date"
                 value={form.date}
-                onChange={(e) => setForm({ ...form, date: e.target.value })}
+                min={new Date().toISOString().slice(0, 10)}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    date: e.target.value,
+                    startTime: "",
+                  })
+                }
                 required
               />
             </div>
@@ -312,11 +366,34 @@ export default function PublicBookingPage() {
 
             <div className="md:col-span-2 flex flex-wrap gap-3">
               <Button
+                variant="brand"
                 type="submit"
-                disabled={saving || !form.startTime || slots.length === 0}
+                disabled={
+                  saving ||
+                  !form.startTime ||
+                  slots.length === 0 ||
+                  Boolean(success)
+                }
               >
                 {saving ? "Guardando..." : "Confirmar reserva"}
               </Button>
+              {success && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    setSuccess(null);
+                    setError(null);
+                    setForm((prev) => ({
+                      ...prev,
+                      clientName: "",
+                      clientPhone: "",
+                    }));
+                  }}
+                >
+                  Agendar otro turno
+                </Button>
+              )}
               <div className="flex items-center gap-2 text-xs text-slate-300">
                 <CalendarClock className="w-4 h-4" />
                 <span>

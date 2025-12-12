@@ -5,10 +5,15 @@ import { UpdateStaffDto } from './dto/update-staff.dto';
 import { AcceptInviteDto } from './dto/accept-invite.dto';
 import { randomUUID } from 'crypto';
 import { StaffStatus } from '@prisma/client';
+import { BillingService } from '../billing/billing.service';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class StaffService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private billingService: BillingService,
+  ) {}
 
   async create(businessId: string, createStaffDto: CreateStaffDto) {
     // Check if staff already exists
@@ -21,6 +26,22 @@ export class StaffService {
 
     if (existing) {
       throw new BadRequestException('Staff with this email already exists in this business');
+    }
+
+    const currentCount = await this.prisma.staff.count({
+      where: { businessId },
+    });
+
+    const canAdd = await this.billingService.checkLimit(
+      businessId,
+      'maxStaff',
+      currentCount,
+    );
+
+    if (!canAdd) {
+      throw new BadRequestException(
+        'Has alcanzado el límite de personal de tu plan. Actualiza tu plan para agregar más.',
+      );
     }
 
     const token = randomUUID();
@@ -73,11 +94,32 @@ export class StaffService {
     });
 
     if (!staff) {
-      throw new NotFoundException('Invalid invite token');
+      throw new NotFoundException('Token de invitación inválido');
     }
 
     if (staff.status !== StaffStatus.PENDING) {
-      throw new BadRequestException('Invite already accepted or invalid');
+      throw new BadRequestException('La invitación ya fue aceptada o es inválida');
+    }
+
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email: staff.email },
+    });
+
+    if (!existingUser) {
+      if (!dto.password) {
+        throw new BadRequestException(
+          'Necesitás definir una contraseña para crear tu acceso.',
+        );
+      }
+
+      const hashedPassword = await bcrypt.hash(dto.password, 10);
+      await this.prisma.user.create({
+        data: {
+          name: dto.name?.trim() || staff.name,
+          email: staff.email,
+          password: hashedPassword,
+        },
+      });
     }
 
     return this.prisma.staff.update({

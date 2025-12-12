@@ -34,7 +34,7 @@ export class AnalyticsService {
 
     // 3. Cancellation Rate
     const cancelled = await this.prisma.booking.count({
-      where: { businessId, status: 'CANCELLED' },
+      where: { businessId, status: 'cancelled' },
     });
     const cancellationRate = totalBookings > 0 ? (cancelled / totalBookings) * 100 : 0;
 

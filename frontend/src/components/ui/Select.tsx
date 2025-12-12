@@ -10,7 +10,7 @@ export const Select = forwardRef<HTMLSelectElement, Props>(
       className={clsx(
         "input-field",
         "h-12",
-        "w-full max-w-full overflow-hidden",   // ← FIX REAL
+        "w-full max-w-full",
         className,
       )}
       {...props}

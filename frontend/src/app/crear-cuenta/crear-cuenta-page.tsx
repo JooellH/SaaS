@@ -79,7 +79,7 @@ export default function CrearCuentaPage() {
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="input-field input-compact h-12 pl-11 pr-11"
+                  className="input-field input-compact h-12 pl-11"
                   placeholder="Tu nombre"
                 />
               </div>
@@ -94,7 +94,7 @@ export default function CrearCuentaPage() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="input-field input-compact h-12 pl-11 pr-11"
+                  className="input-field input-compact h-12 pl-11"
                   placeholder="demo@reservapro.com"
                 />
               </div>
@@ -115,7 +115,7 @@ export default function CrearCuentaPage() {
 
                 <button
                   type="button"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md border-0 bg-transparent p-1 text-slate-400 hover:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60 transition-colors"
                   onClick={() => setShowPassword((v) => !v)}
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}

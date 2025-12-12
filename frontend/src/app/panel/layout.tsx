@@ -13,6 +13,9 @@ import {
   NotebookText,
   Settings2,
   Home,
+  Users,
+  BarChart3,
+  CreditCard,
 } from "lucide-react";
 
 export default function DashboardLayout({
@@ -47,6 +50,9 @@ export default function DashboardLayout({
     { label: "Reservas", href: "/panel/reservas", icon: CalendarClock },
     { label: "Servicios", href: "/panel/servicios", icon: NotebookText },
     { label: "Horarios", href: "/panel/horarios", icon: CalendarClock },
+    { label: "Personal", href: "/panel/personal", icon: Users },
+    { label: "Analytics", href: "/panel/analytics", icon: BarChart3 },
+    { label: "Planes", href: "/panel/planes", icon: CreditCard },
     { label: "Ajustes", href: "/panel/ajustes", icon: Settings2 },
   ];
 
