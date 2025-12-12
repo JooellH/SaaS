@@ -9,10 +9,13 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { FormFeedback } from "@/components/ui/FormFeedback";
 import { CheckCircle2, Sparkles } from "lucide-react";
 import ElectroBorder from "@/components/ui/electro-border";
+import { useAuth } from "@/contexts/AuthContext";
+import Link from "next/link";
 
 interface Business {
   id: string;
   name: string;
+  ownerId?: string;
 }
 
 interface Plan {
@@ -50,6 +53,7 @@ const limitLabels: Record<string, string> = {
 };
 
 export default function PlanesScreen() {
+  const { user } = useAuth();
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [selectedBusinessId, setSelectedBusinessId] = useState<string>("");
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -115,9 +119,7 @@ export default function PlanesScreen() {
       setLoadingSub(true);
       setError(null);
       try {
-        const res = await api.get(
-          `/billing/subscription/${selectedBusinessId}`,
-        );
+        const res = await api.get(`/billing/subscription/${selectedBusinessId}`);
         setAccess(res.data as BillingAccess);
       } catch {
         setAccess(null);
@@ -128,6 +130,11 @@ export default function PlanesScreen() {
     loadSubscription();
   }, [selectedBusinessId]);
 
+  const viewerIsOwner = useMemo(() => {
+    const selected = businesses.find((b) => b.id === selectedBusinessId);
+    return !!(user?.id && selected?.ownerId && selected.ownerId === user.id);
+  }, [businesses, selectedBusinessId, user?.id]);
+
   const sortedPlans = useMemo(
     () => [...plans].sort((a, b) => a.price - b.price),
     [plans],
@@ -135,14 +142,15 @@ export default function PlanesScreen() {
 
   const changePlan = async (planId: string) => {
     if (!selectedBusinessId) return;
+    if (!viewerIsOwner) {
+      setError("Solo el owner del negocio puede administrar el plan.");
+      return;
+    }
     setSaving(planId);
     setError(null);
     setSuccess(null);
     try {
-      const res = await api.patch(
-        `/billing/subscription/${selectedBusinessId}`,
-        { planId },
-      );
+      await api.patch(`/billing/subscription/${selectedBusinessId}`, { planId });
       const refreshed = await api.get(
         `/billing/subscription/${selectedBusinessId}`,
       );
@@ -180,7 +188,7 @@ export default function PlanesScreen() {
             value={selectedBusinessId}
             onChange={(e) => setSelectedBusinessId(e.target.value)}
             className="w-56"
-            disabled={loadingBusinesses}
+            disabled={loadingBusinesses || businesses.length === 0}
           >
             <option value="" disabled>
               Selecciona un negocio
@@ -197,17 +205,52 @@ export default function PlanesScreen() {
       {error && <FormFeedback variant="error" message={error} />}
       {success && <FormFeedback variant="success" message={success} />}
 
+      {!loadingBusinesses && businesses.length === 0 && (
+        <Card className="space-y-2">
+          <p className="text-sm text-slate-200">
+            Para elegir un plan necesitás tener un negocio propio.
+          </p>
+          <p className="text-sm text-slate-400">
+            Si sos staff en un negocio, el plan lo administra el owner. Podés
+            crear tu negocio y contratar Pro aparte.
+          </p>
+          <div className="flex gap-2">
+            <Link href="/panel?create=1" className="btn-primary">
+              Crear mi negocio
+            </Link>
+            <Link href="/panel" className="btn-secondary">
+              Volver al panel
+            </Link>
+          </div>
+        </Card>
+      )}
+
+      {!viewerIsOwner && selectedBusinessId && (
+        <div className="rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+          Estás como staff. El plan Pro/Básico pertenece al negocio y lo
+          administra el owner.
+        </div>
+      )}
+
       {access?.trial?.isActive && (
         <FormFeedback
           variant="success"
-          message={`Tenés prueba Pro gratis activa: te quedan ${access.trial.daysLeft} día(s).`}
+          message={
+            viewerIsOwner
+              ? `Tenés prueba Pro gratis activa: te quedan ${access.trial.daysLeft} día(s).`
+              : `El negocio tiene prueba Pro activa (beneficios Pro habilitados por el owner): quedan ${access.trial.daysLeft} día(s).`
+          }
         />
       )}
 
       {access?.trial?.isExpired && (
         <FormFeedback
           variant="error"
-          message="Tu prueba Pro terminó. Se activaron límites del plan Básico (personal, servicios y reservas/mes)."
+          message={
+            viewerIsOwner
+              ? "Tu prueba Pro terminó. Se activaron límites del plan Básico (personal, servicios y reservas/mes)."
+              : "El negocio está en Básico por falta de pago del owner. Se activaron límites (personal, servicios y reservas/mes)."
+          }
         />
       )}
 
@@ -228,14 +271,12 @@ export default function PlanesScreen() {
           {sortedPlans.map((plan) => {
             const effectivePlanId = access?.effectivePlanId ?? "";
             const isCurrent = effectivePlanId === plan.id;
-            const isTrialPro =
-              access?.trial?.isActive && plan.id === "plan_pro";
+            const isTrialPro = access?.trial?.isActive && plan.id === "plan_pro";
             const isPaidCurrent =
               access?.subscription?.status === "ACTIVE" &&
               access.subscription.planId === plan.id;
             const limitsEntries = Object.entries(plan.limits || {});
-            const accent =
-              plan.id === "plan_pro" ? "#8b5cf6" : "#22d3ee";
+            const accent = plan.id === "plan_pro" ? "#8b5cf6" : "#22d3ee";
             return (
               <ElectroBorder
                 key={plan.id}
@@ -295,11 +336,13 @@ export default function PlanesScreen() {
 
                   <Button
                     onClick={() => changePlan(plan.id)}
-                    disabled={saving !== null || isPaidCurrent}
+                    disabled={saving !== null || isPaidCurrent || !viewerIsOwner}
                     className="w-full"
                     variant={isCurrent ? "secondary" : "primary"}
                   >
-                    {isPaidCurrent ? (
+                    {!viewerIsOwner ? (
+                      "Solo el owner puede cambiar"
+                    ) : isPaidCurrent ? (
                       <>
                         <CheckCircle2 className="w-4 h-4" />
                         Plan actual
@@ -320,9 +363,7 @@ export default function PlanesScreen() {
       )}
 
       {!loadingPlans && plans.length === 0 && (
-        <Card className="text-sm text-slate-300">
-          No hay planes configurados.
-        </Card>
+        <Card className="text-sm text-slate-300">No hay planes configurados.</Card>
       )}
     </div>
   );

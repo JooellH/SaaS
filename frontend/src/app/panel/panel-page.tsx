@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Building2, PlusCircle, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -29,6 +30,7 @@ const fadeIn = {
 };
 
 export default function PanelScreen() {
+  const searchParams = useSearchParams();
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [loading, setLoading] = useState(true);
   const [lostMemberships, setLostMemberships] = useState<LostMembership[]>([]);
@@ -43,6 +45,12 @@ export default function PanelScreen() {
   useEffect(() => {
     loadBusinesses();
   }, []);
+
+  useEffect(() => {
+    if (searchParams.get("create") === "1") {
+      setShowModal(true);
+    }
+  }, [searchParams]);
 
   const loadBusinesses = async () => {
     try {
@@ -185,15 +193,14 @@ export default function PanelScreen() {
                 Cuando el owner reactive Pro vas a recuperar el acceso
                 automáticamente.
               </p>
-              <div className="flex justify-center gap-2">
-                <Button
-                  onClick={() => setShowModal(true)}
-                  variant="secondary"
-                  className="px-4 py-2"
-                >
+              <div className="grid grid-cols-2 gap-3 w-full max-w-md mx-auto">
+                <Button onClick={() => setShowModal(true)} variant="secondary">
                   Crear mi negocio
                 </Button>
-                <Link href="/panel/planes" className="btn-primary !h-11">
+                <Link
+                  href="/panel/planes"
+                  className="btn-primary w-full no-underline hover:no-underline"
+                >
                   Ver planes
                 </Link>
               </div>

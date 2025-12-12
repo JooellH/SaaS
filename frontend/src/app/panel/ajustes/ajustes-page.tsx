@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import Link from "next/link";
 import api from "@/lib/api";
 import { businessSchema } from "@/lib/validations";
 import { motion } from "framer-motion";
@@ -11,9 +12,11 @@ import { Input } from "@/components/ui/Input";
 import { Card } from "@/components/ui/Card";
 import { FormFeedback } from "@/components/ui/FormFeedback";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Business {
   id: string;
+  ownerId?: string;
   name: string;
   slug: string;
   timezone: string;
@@ -30,6 +33,7 @@ const fadeUp = {
 };
 
 export default function AjustesScreen() {
+  const { user } = useAuth();
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [selectedBusinessId, setSelectedBusinessId] = useState<string>("");
   const [form, setForm] = useState<Business | null>(null);
@@ -37,21 +41,44 @@ export default function AjustesScreen() {
   const [success, setSuccess] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [loadingBusiness, setLoadingBusiness] = useState(false);
+  const [loadingBusinesses, setLoadingBusinesses] = useState(true);
 
   useEffect(() => {
     const loadBusinesses = async () => {
+      setLoadingBusinesses(true);
       try {
         const res = await api.get("/business");
-        setBusinesses(res.data);
-        if (res.data.length > 0) {
-          setSelectedBusinessId(res.data[0].id);
-        }
+        const list = Array.isArray(res.data)
+          ? res.data
+          : (res.data as { data?: unknown }).data;
+        const normalized = Array.isArray(list) ? (list as Business[]) : [];
+        const owned =
+          user?.id ? normalized.filter((b) => b.ownerId === user.id) : [];
+        setBusinesses(owned);
+
+        const active = localStorage.getItem("activeBusinessId");
+        const nextId =
+          (active && owned.some((b) => b.id === active) && active) ||
+          owned[0]?.id ||
+          "";
+        setSelectedBusinessId(nextId);
+        if (!nextId) setForm(null);
       } catch {
         setError("No se pudieron cargar los negocios");
+        setBusinesses([]);
+        setSelectedBusinessId("");
+        setForm(null);
+      } finally {
+        setLoadingBusinesses(false);
       }
     };
     loadBusinesses();
-  }, []);
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!selectedBusinessId) return;
+    localStorage.setItem("activeBusinessId", selectedBusinessId);
+  }, [selectedBusinessId]);
 
   useEffect(() => {
     if (!selectedBusinessId) return;
@@ -125,7 +152,11 @@ export default function AjustesScreen() {
             value={selectedBusinessId}
             onChange={(e) => setSelectedBusinessId(e.target.value)}
             className="w-56"
+            disabled={loadingBusinesses || businesses.length === 0}
           >
+            <option value="" disabled>
+              Selecciona un negocio
+            </option>
             {businesses.map((b) => (
               <option key={b.id} value={b.id}>
                 {b.name}
@@ -137,6 +168,25 @@ export default function AjustesScreen() {
 
       {error && <FormFeedback variant="error" message={error} />}
       {success && <FormFeedback variant="success" message={success} />}
+
+      {!loadingBusinesses && businesses.length === 0 && (
+        <Card className="max-w-xl space-y-2">
+          <p className="text-sm text-slate-200">
+            Ajustes solo está disponible para negocios donde sos owner.
+          </p>
+          <p className="text-sm text-slate-400">
+            Si sos staff en un negocio, el owner administra los ajustes.
+          </p>
+          <div className="flex gap-2">
+            <Link href="/panel?create=1" className="btn-primary">
+              Crear mi negocio
+            </Link>
+            <Link href="/panel" className="btn-secondary">
+              Volver al panel
+            </Link>
+          </div>
+        </Card>
+      )}
 
       {loadingBusiness && (
         <Card className="space-y-3 max-w-xl">
