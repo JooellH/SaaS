@@ -81,26 +81,16 @@ export default function TrialBanner() {
   }, [user?.id]);
 
   useEffect(() => {
-    if (!noBusiness) {
-      setShowLostBanner(false);
-      return;
-    }
-
+    if (!noBusiness) return;
     const first = lost[0];
-    if (!first) {
-      setShowLostBanner(false);
-      return;
-    }
+    if (!first) return;
 
     const seenKey = `lostMembershipSeen:${first.businessId}`;
     const alreadySeen = localStorage.getItem(seenKey) === "1";
-    if (alreadySeen) {
-      setShowLostBanner(false);
-      return;
-    }
+    if (alreadySeen) return;
 
     localStorage.setItem(seenKey, "1");
-    setShowLostBanner(true);
+    queueMicrotask(() => setShowLostBanner(true));
     const t = window.setTimeout(() => setShowLostBanner(false), 8000);
     return () => window.clearTimeout(t);
   }, [noBusiness, lost]);
@@ -184,4 +174,3 @@ export default function TrialBanner() {
 
   return null;
 }
-

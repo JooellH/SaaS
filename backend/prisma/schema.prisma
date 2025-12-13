@@ -203,6 +203,12 @@ model Subscription {
   status     String // ACTIVE, CANCELLED, PAST_DUE
   startDate  DateTime
   endDate    DateTime?
+
+  // Stripe (opcional)
+  stripeCustomerId     String?  @unique
+  stripeSubscriptionId String?  @unique
+  currentPeriodEnd     DateTime?
+
   createdAt  DateTime @default(now())
   updatedAt  DateTime @default(now()) @updatedAt
 }

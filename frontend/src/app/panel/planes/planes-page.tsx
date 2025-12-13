@@ -11,6 +11,7 @@ import { CheckCircle2, Sparkles } from "lucide-react";
 import ElectroBorder from "@/components/ui/electro-border";
 import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 interface Business {
   id: string;
@@ -55,6 +56,7 @@ const limitLabels: Record<string, string> = {
 
 export default function PlanesScreen() {
   const { user } = useAuth();
+  const searchParams = useSearchParams();
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [selectedBusinessId, setSelectedBusinessId] = useState<string>("");
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -62,9 +64,10 @@ export default function PlanesScreen() {
   const [loadingBusinesses, setLoadingBusinesses] = useState(true);
   const [loadingPlans, setLoadingPlans] = useState(true);
   const [loadingSub, setLoadingSub] = useState(false);
-  const [saving, setSaving] = useState<string | null>(null);
+  const [saving, setSaving] = useState<"checkout" | "portal" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     const loadBusinesses = async () => {
@@ -129,7 +132,26 @@ export default function PlanesScreen() {
       }
     };
     loadSubscription();
-  }, [selectedBusinessId]);
+  }, [selectedBusinessId, refreshKey]);
+
+  useEffect(() => {
+    const checkout = searchParams.get("checkout");
+    if (!checkout) return;
+
+    if (checkout === "success") {
+      setSuccess(
+        "Pago iniciado. Si ya completaste el checkout, puede tardar unos segundos en reflejarse.",
+      );
+      setRefreshKey((k) => k + 1);
+      const t = window.setTimeout(() => setRefreshKey((k) => k + 1), 2000);
+      return () => window.clearTimeout(t);
+    }
+
+    if (checkout === "cancel") {
+      setError("Checkout cancelado.");
+      return;
+    }
+  }, [searchParams]);
 
   const viewerIsOwner = useMemo(() => {
     const selected = businesses.find((b) => b.id === selectedBusinessId);
@@ -146,22 +168,24 @@ export default function PlanesScreen() {
     [plans],
   );
 
-  const changePlan = async (planId: string) => {
+  const startCheckout = async () => {
     if (!selectedBusinessId) return;
     if (!viewerIsOwner) {
       setError("Solo el owner del negocio puede administrar el plan.");
       return;
     }
-    setSaving(planId);
+
+    setSaving("checkout");
     setError(null);
     setSuccess(null);
     try {
-      await api.patch(`/billing/subscription/${selectedBusinessId}`, { planId });
-      const refreshed = await api.get(
-        `/billing/subscription/${selectedBusinessId}`,
-      );
-      setAccess(refreshed.data as BillingAccess);
-      setSuccess("Plan actualizado correctamente.");
+      const res = await api.post(`/billing/checkout/${selectedBusinessId}`);
+      const url = (res.data as { url?: unknown })?.url;
+      if (typeof url === "string" && url) {
+        window.location.href = url;
+        return;
+      }
+      setError("No se pudo iniciar el checkout.");
     } catch (err: unknown) {
       const message =
         typeof err === "object" &&
@@ -171,7 +195,41 @@ export default function PlanesScreen() {
           ?.data?.message === "string"
           ? (err as { response: { data: { message: string } } }).response.data
               .message
-          : "No se pudo actualizar el plan.";
+          : "No se pudo iniciar el checkout.";
+      setError(message);
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  const openPortal = async () => {
+    if (!selectedBusinessId) return;
+    if (!viewerIsOwner) {
+      setError("Solo el owner del negocio puede administrar el plan.");
+      return;
+    }
+
+    setSaving("portal");
+    setError(null);
+    setSuccess(null);
+    try {
+      const res = await api.post(`/billing/portal/${selectedBusinessId}`);
+      const url = (res.data as { url?: unknown })?.url;
+      if (typeof url === "string" && url) {
+        window.location.href = url;
+        return;
+      }
+      setError("No se pudo abrir la gestión de suscripción.");
+    } catch (err: unknown) {
+      const message =
+        typeof err === "object" &&
+        err !== null &&
+        "response" in err &&
+        typeof (err as { response?: { data?: { message?: string } } }).response
+          ?.data?.message === "string"
+          ? (err as { response: { data: { message: string } } }).response.data
+              .message
+          : "No se pudo abrir la gestión de suscripción.";
       setError(message);
     } finally {
       setSaving(null);
@@ -290,9 +348,18 @@ export default function PlanesScreen() {
             const effectivePlanId = access?.effectivePlanId ?? "";
             const isCurrent = effectivePlanId === plan.id;
             const isTrialPro = access?.trial?.isActive && plan.id === "plan_pro";
-            const isPaidCurrent =
+            const paidProActive =
               access?.subscription?.status === "ACTIVE" &&
-              access.subscription.planId === plan.id;
+              access.subscription.planId === "plan_pro";
+
+            const canCheckout =
+              viewerIsOwner && plan.id === "plan_pro" && !paidProActive;
+            const canManage = viewerIsOwner && paidProActive;
+            const buttonDisabled =
+              saving !== null ||
+              !viewerIsOwner ||
+              plan.id !== "plan_pro" ||
+              (!canCheckout && !canManage);
             const limitsEntries = Object.entries(plan.limits || {});
             const accent = plan.id === "plan_pro" ? "#8b5cf6" : "#22d3ee";
             return (
@@ -353,22 +420,38 @@ export default function PlanesScreen() {
                   </div>
 
                   <Button
-                    onClick={() => changePlan(plan.id)}
-                    disabled={saving !== null || isPaidCurrent || !viewerIsOwner}
+                    onClick={() => {
+                      if (plan.id === "plan_pro") {
+                        if (canManage) return void openPortal();
+                        if (canCheckout) return void startCheckout();
+                      }
+                    }}
+                    disabled={buttonDisabled}
                     className="w-full"
                     variant={isCurrent ? "secondary" : "primary"}
                   >
                     {!viewerIsOwner ? (
                       "Solo el owner puede cambiar"
-                    ) : isPaidCurrent ? (
+                    ) : plan.id !== "plan_pro" ? (
+                      isCurrent ? (
+                        <>
+                          <CheckCircle2 className="w-4 h-4" />
+                          Plan actual
+                        </>
+                      ) : (
+                        "Gratis"
+                      )
+                    ) : canManage ? (
                       <>
                         <CheckCircle2 className="w-4 h-4" />
-                        Plan actual
+                        Administrar suscripción
                       </>
-                    ) : isCurrent ? (
-                      "Plan en prueba"
-                    ) : saving === plan.id ? (
-                      "Actualizando..."
+                    ) : saving === "checkout" ? (
+                      "Abriendo checkout..."
+                    ) : saving === "portal" ? (
+                      "Abriendo..."
+                    ) : isTrialPro ? (
+                      "Activar Pro"
                     ) : (
                       "Elegir plan"
                     )}

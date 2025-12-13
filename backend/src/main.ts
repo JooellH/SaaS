@@ -1,7 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { json, urlencoded } from 'express';
+import { json, raw, urlencoded } from 'express';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -9,6 +9,9 @@ async function bootstrap() {
 
   // Prefix all routes with /api to match frontend expectations
   app.setGlobalPrefix('api');
+
+  // Stripe needs the raw body to validate webhook signatures
+  app.use('/api/billing/webhook', raw({ type: 'application/json' }));
 
   // Allow storing small images as data URLs (logo/banner) in JSON bodies
   app.use(json({ limit: '2mb' }));
