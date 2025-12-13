@@ -14,13 +14,13 @@ export const businessSchema = z.object({
   slug: z.string().min(1).regex(/^[a-z0-9-]+$/),
   timezone: z.string().min(1),
   phoneNumber: z.string().optional(),
-  whatsappToken: z.string().optional(),
   logoUrl: z
     .string()
+    .nullable()
     .optional()
     .refine(
       (value) =>
-        !value ||
+        value == null ||
         value.startsWith("http://") ||
         value.startsWith("https://") ||
         value.startsWith("data:image/") ||
@@ -29,10 +29,11 @@ export const businessSchema = z.object({
     ),
   bannerUrl: z
     .string()
+    .nullable()
     .optional()
     .refine(
       (value) =>
-        !value ||
+        value == null ||
         value.startsWith("http://") ||
         value.startsWith("https://") ||
         value.startsWith("data:image/") ||

@@ -21,7 +21,6 @@ interface Business {
   slug: string;
   timezone: string;
   phoneNumber?: string | null;
-  whatsappToken?: string | null;
   logoUrl?: string | null;
   bannerUrl?: string | null;
 }
@@ -155,14 +154,17 @@ export default function AjustesScreen() {
     setSuccess(null);
     setSaving(true);
 
+    const logoTrimmed = form.logoUrl?.trim();
+    const bannerTrimmed = form.bannerUrl?.trim();
+
     const parsed = businessSchema.safeParse({
       name: form.name,
       slug: form.slug,
       timezone: form.timezone,
       phoneNumber: form.phoneNumber?.trim() || undefined,
-      whatsappToken: form.whatsappToken?.trim() || undefined,
-      logoUrl: form.logoUrl?.trim() || undefined,
-      bannerUrl: form.bannerUrl?.trim() || undefined,
+      logoUrl: logoTrimmed && logoTrimmed.length > 0 ? logoTrimmed : null,
+      bannerUrl:
+        bannerTrimmed && bannerTrimmed.length > 0 ? bannerTrimmed : null,
     });
     if (!parsed.success) {
       setError("Revisa los campos del negocio.");
@@ -432,19 +434,6 @@ export default function AjustesScreen() {
                     value={form.phoneNumber ?? ""}
                     onChange={(e) =>
                       setForm({ ...form, phoneNumber: e.target.value })
-                    }
-                  />
-                </motion.div>
-                <motion.div variants={fadeUp} className="space-y-2 md:col-span-2">
-                  <label className="block text-sm text-slate-200">
-                    Token de WhatsApp Cloud API
-                  </label>
-                  <Input
-                    type="password"
-                    placeholder="EAAJ..."
-                    value={form.whatsappToken ?? ""}
-                    onChange={(e) =>
-                      setForm({ ...form, whatsappToken: e.target.value })
                     }
                   />
                 </motion.div>

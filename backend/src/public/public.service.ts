@@ -98,6 +98,7 @@ export class PublicService {
         startTime: true,
         endTime: true,
         status: true,
+        metadata: true,
         service: { select: { name: true, durationMinutes: true, price: true } },
       },
       orderBy: [{ date: 'desc' }, { startTime: 'desc' }],

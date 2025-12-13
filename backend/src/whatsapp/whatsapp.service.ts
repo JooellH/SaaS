@@ -8,6 +8,7 @@ export class WhatsappService {
   private readonly logger = new Logger(WhatsappService.name);
   private readonly apiUrl = 'https://graph.facebook.com/v18.0';
   private readonly globalToken: string | null;
+  private readonly ownerNotifyTo: string | null;
 
   constructor(
     private prisma: PrismaService,
@@ -17,6 +18,9 @@ export class WhatsappService {
       this.configService.get<string>('WHATSAPP_CLOUD_API_TOKEN') ||
       this.configService.get<string>('WHATSAPP_TOKEN') ||
       null;
+
+    this.ownerNotifyTo =
+      this.configService.get<string>('WHATSAPP_OWNER_NOTIFY_TO') || null;
   }
 
   async sendConfirmation(bookingId: string) {
@@ -83,7 +87,7 @@ export class WhatsappService {
       ? `${message}\n\nMotivo: ${cleanReason}`
       : message;
 
-    return this.sendMessage(
+    const result = await this.sendMessage(
       booking.business.whatsappToken,
       booking.business.phoneNumber,
       booking.clientPhone,
@@ -91,6 +95,25 @@ export class WhatsappService {
       bookingId,
       'cancellation',
     );
+
+    const notifyTo = this.ownerNotifyTo?.trim();
+    if (notifyTo) {
+      const ownerMessage = `📌 *Cancelación registrada*\n\nNegocio: ${booking.business.name}\nCliente: ${booking.clientName} (${booking.clientPhone})\nServicio: ${booking.service.name}\nFecha: ${booking.date.toLocaleDateString()}\nHora: ${booking.startTime}\n\nMotivo: ${cleanReason || 'Sin motivo'}`;
+      try {
+        await this.sendMessage(
+          booking.business.whatsappToken,
+          booking.business.phoneNumber,
+          notifyTo,
+          ownerMessage,
+          bookingId,
+          'owner_cancellation',
+        );
+      } catch {
+        // ignore owner notify errors
+      }
+    }
+
+    return result;
   }
 
   private async sendMessage(

@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { json, urlencoded } from 'express';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -8,6 +9,10 @@ async function bootstrap() {
 
   // Prefix all routes with /api to match frontend expectations
   app.setGlobalPrefix('api');
+
+  // Allow storing small images as data URLs (logo/banner) in JSON bodies
+  app.use(json({ limit: '2mb' }));
+  app.use(urlencoded({ extended: true, limit: '2mb' }));
 
   app.enableCors({
     origin: process.env.FRONTEND_URL?.split(',').map((o) => o.trim()) || [

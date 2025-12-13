@@ -45,6 +45,7 @@ type ClientBooking = {
   endTime: string;
   status: string;
   service?: { name: string };
+  metadata?: { cancellationReason?: string } | null;
 };
 
 const statusLabels: Record<string, string> = {
@@ -648,6 +649,12 @@ export default function PublicReservasPage() {
                         <CheckCircle2 className="w-4 h-4" />
                         {statusLabels[booking.status] || booking.status}
                       </div>
+                      {booking.status === "cancelled" &&
+                      booking.metadata?.cancellationReason ? (
+                        <div className="text-xs text-amber-200/90">
+                          Cancelada. Motivo: {booking.metadata.cancellationReason}
+                        </div>
+                      ) : null}
                     </div>
                     {booking.status !== "cancelled" && (
                       <div className="flex flex-wrap gap-2 justify-end">
