@@ -2,16 +2,20 @@
 
 import { useEffect, useMemo, useState } from "react";
 import api from "@/lib/api";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Select } from "@/components/ui/Select";
 import { Badge } from "@/components/ui/Badge";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { Input } from "@/components/ui/Input";
+import { FormFeedback } from "@/components/ui/FormFeedback";
+import { Trash2 } from "lucide-react";
 
 interface Business {
   id: string;
   name: string;
+  logoUrl?: string | null;
 }
 
 interface Booking {
@@ -47,6 +51,10 @@ export default function ReservasScreen() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<Booking | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancelError, setCancelError] = useState<string | null>(null);
+  const [cancelLoading, setCancelLoading] = useState(false);
 
   useEffect(() => {
     const loadBusinesses = async () => {
@@ -62,6 +70,24 @@ export default function ReservasScreen() {
     };
     loadBusinesses();
   }, []);
+
+  const selectedBusiness = useMemo(
+    () => businesses.find((b) => b.id === selectedBusinessId) || null,
+    [businesses, selectedBusinessId],
+  );
+
+  const formatDate = (iso: string) => {
+    const dateOnly = iso.split("T")[0] ?? iso;
+    const [y, m, d] = dateOnly.split("-").map(Number);
+    const utc = new Date(Date.UTC(y, m - 1, d));
+    return utc.toLocaleDateString("es-ES", {
+      weekday: "short",
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      timeZone: "UTC",
+    });
+  };
 
   useEffect(() => {
     if (!selectedBusinessId) return;
@@ -80,18 +106,50 @@ export default function ReservasScreen() {
     loadBookings();
   }, [selectedBusinessId]);
 
-  const cancelBooking = async (id: string) => {
-    await api.patch(`/bookings/${id}/cancel`);
-    setBookings((prev) =>
-      prev.map((b) => (b.id === id ? { ...b, status: "cancelled" } : b)),
-    );
+  const openCancel = (booking: Booking) => {
+    setCancelTarget(booking);
+    setCancelReason("");
+    setCancelError(null);
+  };
+
+  const confirmCancel = async () => {
+    if (!cancelTarget) return;
+    setCancelLoading(true);
+    setCancelError(null);
+    try {
+      await api.patch(`/bookings/${cancelTarget.id}/cancel`, {
+        reason: cancelReason.trim() || undefined,
+      });
+      setBookings((prev) =>
+        prev.map((b) =>
+          b.id === cancelTarget.id ? { ...b, status: "cancelled" } : b,
+        ),
+      );
+      setCancelTarget(null);
+      setCancelReason("");
+    } catch (err: unknown) {
+      const message =
+        typeof err === "object" &&
+        err !== null &&
+        "response" in err &&
+        typeof (err as { response?: { data?: { message?: string } } }).response
+          ?.data?.message === "string"
+          ? (err as { response: { data: { message: string } } }).response.data
+              .message
+          : "No se pudo cancelar la reserva";
+      setCancelError(message);
+    } finally {
+      setCancelLoading(false);
+    }
   };
 
   const sortedBookings = useMemo(
     () =>
       [...bookings].sort(
         (a, b) =>
-          new Date(b.date).getTime() - new Date(a.date).getTime() ||
+          (b.date.split("T")[0] ?? b.date).localeCompare(
+            a.date.split("T")[0] ?? a.date,
+          ) ||
           a.startTime.localeCompare(b.startTime),
       ),
     [bookings],
@@ -109,18 +167,27 @@ export default function ReservasScreen() {
         </div>
         <div className="flex items-center gap-3">
           <label className="text-sm text-slate-200/80">Negocio</label>
-          <Select
-            aria-label="Selecciona un negocio"
-            value={selectedBusinessId}
-            onChange={(e) => setSelectedBusinessId(e.target.value)}
-            className="w-56"
-          >
-            {businesses.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name}
-              </option>
-            ))}
-          </Select>
+          <div className="flex items-center gap-2">
+            {selectedBusiness?.logoUrl ? (
+              <img
+                src={selectedBusiness.logoUrl}
+                alt="Logo"
+                className="h-8 w-8 rounded-lg object-cover border border-white/10 bg-white/5"
+              />
+            ) : null}
+            <Select
+              aria-label="Selecciona un negocio"
+              value={selectedBusinessId}
+              onChange={(e) => setSelectedBusinessId(e.target.value)}
+              className="w-56"
+            >
+              {businesses.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
+            </Select>
+          </div>
         </div>
       </div>
 
@@ -168,17 +235,13 @@ export default function ReservasScreen() {
                   </Badge>
                 </div>
                 <div className="text-sm text-slate-200">
-                  {new Date(booking.date).toLocaleDateString("es-ES", {
-                    weekday: "short",
-                    day: "2-digit",
-                    month: "short",
-                    year: "numeric",
-                  })} {" "}· {booking.startTime} · {booking.service?.name || "Servicio"}
+                  {formatDate(booking.date)} · {booking.startTime} ·{" "}
+                  {booking.service?.name || "Servicio"}
                 </div>
               </div>
               {booking.status !== "cancelled" && (
                 <Button
-                  onClick={() => cancelBooking(booking.id)}
+                  onClick={() => openCancel(booking)}
                   variant="secondary"
                   className="self-start md:self-auto"
                   aria-label="Cancelar reserva"
@@ -190,6 +253,108 @@ export default function ReservasScreen() {
           ))}
         </motion.div>
       )}
+
+      <AnimatePresence>
+        {cancelTarget && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur"
+            onClick={() => {
+              if (cancelLoading) return;
+              setCancelTarget(null);
+              setCancelReason("");
+              setCancelError(null);
+            }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 10 }}
+              transition={{ type: "spring", stiffness: 220, damping: 20 }}
+              className="w-full max-w-lg rounded-3xl bg-slate-900/80 border border-white/10 shadow-2xl shadow-red-500/15 p-6 space-y-4"
+              role="dialog"
+              aria-modal="true"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-2xl bg-red-500/10 border border-red-400/20">
+                    <Trash2 className="h-5 w-5 text-red-200" />
+                  </div>
+                  <div className="space-y-1">
+                    <h2 className="text-2xl font-semibold text-white">
+                      Cancelar reserva
+                    </h2>
+                    <p className="text-sm text-slate-300">
+                      {cancelTarget.clientName} · {cancelTarget.clientPhone} ·{" "}
+                      {formatDate(cancelTarget.date)} ·{" "}
+                      {cancelTarget.startTime}
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  onClick={() => {
+                    if (cancelLoading) return;
+                    setCancelTarget(null);
+                    setCancelReason("");
+                    setCancelError(null);
+                  }}
+                  variant="ghost"
+                  className="text-sm"
+                >
+                  Cerrar
+                </Button>
+              </div>
+
+              {cancelError && (
+                <FormFeedback variant="error" message={cancelError} />
+              )}
+
+              <div className="space-y-2">
+                <label className="block text-sm text-slate-200">
+                  Motivo (opcional)
+                </label>
+                <Input
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  placeholder="Ej: No vamos a abrir hoy por mantenimiento"
+                />
+                <p className="text-xs text-slate-400">
+                  Se le enviará un WhatsApp al cliente con el motivo.
+                </p>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <Button
+                  type="button"
+                  onClick={() => {
+                    if (cancelLoading) return;
+                    setCancelTarget(null);
+                    setCancelReason("");
+                    setCancelError(null);
+                  }}
+                  variant="secondary"
+                  className="flex-1"
+                >
+                  Volver
+                </Button>
+                <Button
+                  type="button"
+                  onClick={confirmCancel}
+                  disabled={cancelLoading}
+                  variant="secondary"
+                  className="flex-1 border border-red-400/40 bg-red-500/15 text-red-100 hover:bg-red-500/25"
+                >
+                  {cancelLoading ? "Cancelando..." : "Cancelar reserva"}
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

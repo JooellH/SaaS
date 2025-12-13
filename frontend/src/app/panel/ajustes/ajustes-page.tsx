@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import api from "@/lib/api";
 import { businessSchema } from "@/lib/validations";
@@ -42,6 +42,47 @@ export default function AjustesScreen() {
   const [saving, setSaving] = useState(false);
   const [loadingBusiness, setLoadingBusiness] = useState(false);
   const [loadingBusinesses, setLoadingBusinesses] = useState(true);
+
+  const MAX_LOGO_BYTES = 250 * 1024;
+  const MAX_BANNER_BYTES = 900 * 1024;
+
+  const readFileAsDataUrl = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(new Error("No se pudo leer la imagen."));
+      reader.readAsDataURL(file);
+    });
+
+  const handlePickImage = async (
+    field: "logoUrl" | "bannerUrl",
+    file: File | undefined,
+  ) => {
+    if (!form || !file) return;
+    setError(null);
+
+    if (!file.type.startsWith("image/")) {
+      setError("El archivo debe ser una imagen.");
+      return;
+    }
+
+    const maxBytes = field === "logoUrl" ? MAX_LOGO_BYTES : MAX_BANNER_BYTES;
+    if (file.size > maxBytes) {
+      setError(
+        `La imagen es muy pesada. Máximo ${
+          field === "logoUrl" ? "250KB" : "900KB"
+        }.`,
+      );
+      return;
+    }
+
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      setForm({ ...form, [field]: dataUrl });
+    } catch {
+      setError("No se pudo cargar la imagen.");
+    }
+  };
 
   useEffect(() => {
     const loadBusinesses = async () => {
@@ -136,6 +177,11 @@ export default function AjustesScreen() {
     }
   };
 
+  const selectedBusiness = useMemo(
+    () => businesses.find((b) => b.id === selectedBusinessId) || null,
+    [businesses, selectedBusinessId],
+  );
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -148,21 +194,30 @@ export default function AjustesScreen() {
         </div>
         <div className="flex items-center gap-3">
           <label className="text-sm text-slate-200/80">Negocio</label>
-          <Select
-            value={selectedBusinessId}
-            onChange={(e) => setSelectedBusinessId(e.target.value)}
-            className="w-56"
-            disabled={loadingBusinesses || businesses.length === 0}
-          >
-            <option value="" disabled>
-              Selecciona un negocio
-            </option>
-            {businesses.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name}
+          <div className="flex items-center gap-2">
+            {selectedBusiness?.logoUrl ? (
+              <img
+                src={selectedBusiness.logoUrl}
+                alt="Logo"
+                className="h-8 w-8 rounded-lg object-cover border border-white/10 bg-white/5"
+              />
+            ) : null}
+            <Select
+              value={selectedBusinessId}
+              onChange={(e) => setSelectedBusinessId(e.target.value)}
+              className="w-56"
+              disabled={loadingBusinesses || businesses.length === 0}
+            >
+              <option value="" disabled>
+                Selecciona un negocio
               </option>
-            ))}
-          </Select>
+              {businesses.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
+            </Select>
+          </div>
         </div>
       </div>
 
@@ -257,15 +312,45 @@ export default function AjustesScreen() {
               </motion.div>
               <div className="form-grid md:grid-cols-2">
                 <motion.div variants={fadeUp} className="space-y-2 md:col-span-2">
-                  <label className="block text-sm text-slate-200">Logo (URL)</label>
-                  <Input
-                    type="url"
-                    placeholder="https://.../logo.png"
-                    value={form.logoUrl ?? ""}
-                    onChange={(e) =>
-                      setForm({ ...form, logoUrl: e.target.value })
-                    }
-                  />
+                  <label className="block text-sm text-slate-200">Logo</label>
+                  <div className="space-y-2">
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) =>
+                        handlePickImage("logoUrl", e.target.files?.[0])
+                      }
+                    />
+                    <div className="flex gap-2">
+                      <Input
+                        type="text"
+                        placeholder="https://... o data:image/..."
+                        value={form.logoUrl ?? ""}
+                        onChange={(e) =>
+                          setForm({ ...form, logoUrl: e.target.value })
+                        }
+                      />
+                      {form.logoUrl ? (
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          className="shrink-0 !h-12"
+                          onClick={() => setForm({ ...form, logoUrl: null })}
+                        >
+                          Quitar
+                        </Button>
+                      ) : null}
+                    </div>
+                    {form.logoUrl ? (
+                      <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                        <img
+                          src={form.logoUrl}
+                          alt="Logo"
+                          className="h-16 w-16 rounded-lg object-cover"
+                        />
+                      </div>
+                    ) : null}
+                  </div>
                 </motion.div>
                 <motion.div variants={fadeUp} className="space-y-2">
                   <label className="block text-sm text-slate-200">Color de marca</label>
@@ -279,15 +364,45 @@ export default function AjustesScreen() {
                   />
                 </motion.div>
                 <motion.div variants={fadeUp} className="space-y-2 md:col-span-2">
-                  <label className="block text-sm text-slate-200">Banner (URL)</label>
-                  <Input
-                    type="url"
-                    placeholder="https://.../banner.jpg"
-                    value={form.bannerUrl ?? ""}
-                    onChange={(e) =>
-                      setForm({ ...form, bannerUrl: e.target.value })
-                    }
-                  />
+                  <label className="block text-sm text-slate-200">Banner</label>
+                  <div className="space-y-2">
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) =>
+                        handlePickImage("bannerUrl", e.target.files?.[0])
+                      }
+                    />
+                    <div className="flex gap-2">
+                      <Input
+                        type="text"
+                        placeholder="https://... o data:image/..."
+                        value={form.bannerUrl ?? ""}
+                        onChange={(e) =>
+                          setForm({ ...form, bannerUrl: e.target.value })
+                        }
+                      />
+                      {form.bannerUrl ? (
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          className="shrink-0 !h-12"
+                          onClick={() => setForm({ ...form, bannerUrl: null })}
+                        >
+                          Quitar
+                        </Button>
+                      ) : null}
+                    </div>
+                    {form.bannerUrl ? (
+                      <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                        <img
+                          src={form.bannerUrl}
+                          alt="Banner"
+                          className="h-28 w-full rounded-lg object-cover"
+                        />
+                      </div>
+                    ) : null}
+                  </div>
                 </motion.div>
               </div>
 

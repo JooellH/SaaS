@@ -12,11 +12,14 @@ import {
 import { BookingService } from './booking.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { RescheduleBookingDto } from './dto/reschedule-booking.dto';
+import { CancelBookingDto } from './dto/cancel-booking.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { BusinessService } from '../business/business.service';
 import type { Request as ExpressRequest } from 'express';
 
-type AuthedRequest = ExpressRequest & { user: { userId: string; email?: string } };
+type AuthedRequest = ExpressRequest & {
+  user: { userId: string; email?: string };
+};
 
 @Controller('bookings')
 export class BookingController {
@@ -55,16 +58,38 @@ export class BookingController {
 
   @UseGuards(AuthGuard('jwt'))
   @Patch(':id/cancel')
-  cancel(@Param('id') id: string) {
-    return this.bookingService.cancel(id);
+  async cancel(
+    @Request() req: AuthedRequest,
+    @Param('id') id: string,
+    @Body() dto: CancelBookingDto,
+  ) {
+    const booking = await this.bookingService.findOne(id);
+    await this.businessService.assertUserCanAccessBusiness(
+      booking.businessId,
+      req.user.userId,
+      req.user.email,
+    );
+
+    return this.bookingService.cancel(id, {
+      reason: dto.reason,
+      cancelledByUserId: req.user.userId,
+      cancelledBy: 'OWNER',
+    });
   }
 
   @UseGuards(AuthGuard('jwt'))
   @Patch(':id/reschedule')
-  reschedule(
+  async reschedule(
+    @Request() req: AuthedRequest,
     @Param('id') id: string,
     @Body() rescheduleDto: RescheduleBookingDto,
   ) {
+    const booking = await this.bookingService.findOne(id);
+    await this.businessService.assertUserCanAccessBusiness(
+      booking.businessId,
+      req.user.userId,
+      req.user.email,
+    );
     return this.bookingService.reschedule(id, rescheduleDto);
   }
 }

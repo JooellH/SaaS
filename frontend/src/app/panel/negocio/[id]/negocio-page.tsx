@@ -5,7 +5,8 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import api from "@/lib/api";
 import { motion } from "framer-motion";
-import { CalendarClock, Notebook, Settings2, ArrowLeft } from "lucide-react";
+import { CalendarClock, Notebook, Settings2, ArrowLeft, Copy, ExternalLink } from "lucide-react";
+import { Button } from "@/components/ui/Button";
 
 interface Business {
   id: string;
@@ -26,6 +27,8 @@ export default function NegocioScreen() {
   const [business, setBusiness] = useState<Business | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [publicUrl, setPublicUrl] = useState<string>("");
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const loadBusiness = async () => {
@@ -51,6 +54,11 @@ export default function NegocioScreen() {
 
     loadBusiness();
   }, [businessId]);
+
+  useEffect(() => {
+    if (!business?.slug) return;
+    setPublicUrl(`${window.location.origin}/${business.slug}`);
+  }, [business?.slug]);
 
   if (loading) {
     return <div className="py-10 text-center text-slate-200">Cargando negocio...</div>;
@@ -83,10 +91,38 @@ export default function NegocioScreen() {
             </p>
           )}
         </div>
-        <Link href="/panel" className="btn-secondary">
-          <ArrowLeft className="w-4 h-4" />
-          Volver
-        </Link>
+        <div className="flex flex-wrap items-center gap-2 justify-end">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={async () => {
+              if (!publicUrl) return;
+              try {
+                await navigator.clipboard.writeText(publicUrl);
+                setCopied(true);
+                window.setTimeout(() => setCopied(false), 1500);
+              } catch {
+                setCopied(false);
+              }
+            }}
+          >
+            <Copy className="w-4 h-4" />
+            {copied ? "Copiado" : "Copiar link"}
+          </Button>
+          <a
+            href={publicUrl || `/${business.slug}`}
+            target="_blank"
+            rel="noreferrer"
+            className="btn-secondary inline-flex"
+          >
+            <ExternalLink className="w-4 h-4" />
+            Ver público
+          </a>
+          <Link href="/panel" className="btn-secondary">
+            <ArrowLeft className="w-4 h-4" />
+            Volver
+          </Link>
+        </div>
       </div>
 
       <motion.div

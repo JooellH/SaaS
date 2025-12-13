@@ -16,6 +16,7 @@ interface Business {
   id: string;
   name: string;
   ownerId?: string;
+  logoUrl?: string | null;
 }
 
 interface Staff {
@@ -131,6 +132,11 @@ export default function PersonalScreen() {
 
   const proEnabled = access?.effectivePlanId === "plan_pro";
 
+  const selectedBusiness = useMemo(
+    () => businesses.find((b) => b.id === selectedBusinessId) || null,
+    [businesses, selectedBusinessId],
+  );
+
   const handleCreate = async (e: FormEvent) => {
     e.preventDefault();
     if (!selectedBusinessId) return;
@@ -210,21 +216,30 @@ export default function PersonalScreen() {
         </div>
         <div className="flex items-center gap-3">
           <label className="text-sm text-slate-200/80">Negocio</label>
-          <Select
-            value={selectedBusinessId}
-            onChange={(e) => setSelectedBusinessId(e.target.value)}
-            className="w-56"
-            disabled={loadingBusinesses || businesses.length === 0}
-          >
-            <option value="" disabled>
-              Selecciona un negocio
-            </option>
-            {businesses.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name}
+          <div className="flex items-center gap-2">
+            {selectedBusiness?.logoUrl ? (
+              <img
+                src={selectedBusiness.logoUrl}
+                alt="Logo"
+                className="h-8 w-8 rounded-lg object-cover border border-white/10 bg-white/5"
+              />
+            ) : null}
+            <Select
+              value={selectedBusinessId}
+              onChange={(e) => setSelectedBusinessId(e.target.value)}
+              className="w-56"
+              disabled={loadingBusinesses || businesses.length === 0}
+            >
+              <option value="" disabled>
+                Selecciona un negocio
               </option>
-            ))}
-          </Select>
+              {businesses.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
+            </Select>
+          </div>
         </div>
       </div>
 
@@ -426,4 +441,3 @@ export default function PersonalScreen() {
     </div>
   );
 }
-

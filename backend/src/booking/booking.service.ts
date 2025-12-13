@@ -6,9 +6,10 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { RescheduleBookingDto } from './dto/reschedule-booking.dto';
-import { addMinutes, parse, format, startOfMonth, endOfMonth } from 'date-fns';
+import { addMinutes, endOfMonth, startOfMonth } from 'date-fns';
 import { WhatsappService } from '../whatsapp/whatsapp.service';
 import { BillingService } from '../billing/billing.service';
+import { Prisma } from '@prisma/client';
 
 type TimeInterval = {
   start: string;
@@ -23,6 +24,74 @@ export class BookingService {
     private billingService: BillingService,
   ) {}
 
+  private normalizeDateOnly(input: string): string {
+    const dateOnly = input.split('T')[0] ?? input;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateOnly)) {
+      throw new BadRequestException('Invalid date');
+    }
+    return dateOnly;
+  }
+
+  private calendarDateToUtcDate(dateOnly: string): Date {
+    const [year, month, day] = dateOnly.split('-').map(Number);
+    return new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
+  }
+
+  private dayRangeUtc(dateOnly: string): { gte: Date; lt: Date } {
+    const start = this.calendarDateToUtcDate(dateOnly);
+    const end = new Date(start);
+    end.setUTCDate(end.getUTCDate() + 1);
+    return { gte: start, lt: end };
+  }
+
+  private endTimeFromStart(startTime: string, durationMinutes: number): string {
+    const startMinutes = this.timeToMinutes(startTime);
+    const endMinutes = startMinutes + durationMinutes;
+    return this.minutesToTime(endMinutes);
+  }
+
+  private getTimeZoneOffsetMs(date: Date, timeZone: string): number {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    }).formatToParts(date);
+
+    const find = (type: string) =>
+      parts.find((p) => p.type === type)?.value ?? '00';
+
+    const asUTC = new Date(
+      `${find('year')}-${find('month')}-${find('day')}T${find('hour')}:${find('minute')}:${find('second')}Z`,
+    );
+
+    return asUTC.getTime() - date.getTime();
+  }
+
+  private zonedDateTimeToUtc(
+    dateOnly: string,
+    time: string,
+    timeZone: string,
+  ): Date {
+    const [year, month, day] = dateOnly.split('-').map(Number);
+    const [hour, minute] = time.split(':').map(Number);
+    const baseUtc = new Date(Date.UTC(year, month - 1, day, hour, minute, 0, 0));
+
+    const offset1 = this.getTimeZoneOffsetMs(baseUtc, timeZone);
+    let result = new Date(baseUtc.getTime() - offset1);
+
+    const offset2 = this.getTimeZoneOffsetMs(result, timeZone);
+    if (offset2 !== offset1) {
+      result = new Date(baseUtc.getTime() - offset2);
+    }
+
+    return result;
+  }
+
   async create(dto: CreateBookingDto) {
     // Get service to calculate end time
     const service = await this.prisma.service.findUnique({
@@ -30,12 +99,13 @@ export class BookingService {
     });
     if (!service) throw new NotFoundException('Service not found');
 
-    await this.ensureMonthlyLimit(dto.businessId, dto.date);
+    const dateOnly = this.normalizeDateOnly(dto.date);
+    await this.ensureMonthlyLimit(dto.businessId, dateOnly);
 
     // Check availability
     const isAvailable = await this.checkAvailability(
       dto.businessId,
-      dto.date,
+      dateOnly,
       dto.startTime,
       service.durationMinutes + service.cleaningTimeMinutes,
     );
@@ -45,14 +115,12 @@ export class BookingService {
     }
 
     // Calculate end time
-    const startDate = parse(dto.startTime, 'HH:mm', new Date(dto.date));
-    const endDate = addMinutes(startDate, service.durationMinutes);
-    const endTime = format(endDate, 'HH:mm');
+    const endTime = this.endTimeFromStart(dto.startTime, service.durationMinutes);
 
     const booking = await this.prisma.booking.create({
       data: {
         ...dto,
-        date: new Date(dto.date),
+        date: this.calendarDateToUtcDate(dateOnly),
         endTime,
         status: 'confirmed',
       },
@@ -93,14 +161,47 @@ export class BookingService {
     return booking;
   }
 
-  async cancel(id: string) {
+  async cancel(
+    id: string,
+    opts?: {
+      reason?: string;
+      cancelledByUserId?: string;
+      cancelledBy?: 'OWNER' | 'STAFF' | 'CLIENT';
+    },
+  ) {
+    const existing = await this.prisma.booking.findUnique({
+      where: { id },
+      select: { metadata: true },
+    });
+
+    if (!existing) throw new NotFoundException('Booking not found');
+
+    const baseMeta =
+      typeof existing.metadata === 'object' &&
+      existing.metadata !== null &&
+      !Array.isArray(existing.metadata)
+        ? (existing.metadata as Prisma.JsonObject)
+        : ({} as Prisma.JsonObject);
+
+    const cleanReason = opts?.reason?.trim();
+    const nextMetadata: Prisma.JsonObject = {
+      ...baseMeta,
+      cancelledAt: new Date().toISOString(),
+    };
+
+    if (opts?.cancelledByUserId) {
+      nextMetadata.cancelledByUserId = opts.cancelledByUserId;
+    }
+    if (opts?.cancelledBy) nextMetadata.cancelledBy = opts.cancelledBy;
+    if (cleanReason) nextMetadata.cancellationReason = cleanReason;
+
     const updated = await this.prisma.booking.update({
       where: { id },
-      data: { status: 'cancelled' },
+      data: { status: 'cancelled', metadata: nextMetadata },
     });
 
     try {
-      await this.whatsappService.sendCancellation(id);
+      await this.whatsappService.sendCancellation(id, cleanReason);
     } catch {
       // ignore WhatsApp errors
     }
@@ -117,9 +218,10 @@ export class BookingService {
 
     if (!service) throw new NotFoundException('Service not found');
 
+    const dateOnly = this.normalizeDateOnly(dto.date);
     const isAvailable = await this.checkAvailability(
       booking.businessId,
-      dto.date,
+      dateOnly,
       dto.startTime,
       service.durationMinutes + service.cleaningTimeMinutes,
       id,
@@ -129,14 +231,12 @@ export class BookingService {
       throw new BadRequestException('Time slot not available');
     }
 
-    const startDate = parse(dto.startTime, 'HH:mm', new Date(dto.date));
-    const endDate = addMinutes(startDate, service.durationMinutes);
-    const endTime = format(endDate, 'HH:mm');
+    const endTime = this.endTimeFromStart(dto.startTime, service.durationMinutes);
 
     const updated = await this.prisma.booking.update({
       where: { id },
       data: {
-        date: new Date(dto.date),
+        date: this.calendarDateToUtcDate(dateOnly),
         startTime: dto.startTime,
         endTime,
       },
@@ -158,8 +258,8 @@ export class BookingService {
     durationMinutes: number,
     excludeBookingId?: string,
   ): Promise<boolean> {
-    const dateObj = new Date(date);
-    const weekday = dateObj.getDay();
+    const dateOnly = this.normalizeDateOnly(date);
+    const weekday = this.calendarDateToUtcDate(dateOnly).getUTCDay();
 
     // Check business schedule
     const schedule = await this.prisma.schedule.findFirst({
@@ -189,10 +289,11 @@ export class BookingService {
     }
 
     // Check existing bookings
+    const dayRange = this.dayRangeUtc(dateOnly);
     const existingBookings = await this.prisma.booking.findMany({
       where: {
         businessId,
-        date: dateObj,
+        date: dayRange,
         status: { not: 'cancelled' },
         ...(excludeBookingId && { id: { not: excludeBookingId } }),
       },
@@ -225,8 +326,8 @@ export class BookingService {
     });
     if (!service) throw new NotFoundException('Service not found');
 
-    const dateObj = new Date(date);
-    const weekday = dateObj.getDay();
+    const dateOnly = this.normalizeDateOnly(date);
+    const weekday = this.calendarDateToUtcDate(dateOnly).getUTCDay();
 
     const schedule = await this.prisma.schedule.findFirst({
       where: { businessId, weekday, isActive: true },
@@ -252,7 +353,7 @@ export class BookingService {
         const timeStr = this.minutesToTime(time);
         const isAvailable = await this.checkAvailability(
           businessId,
-          date,
+          dateOnly,
           timeStr,
           totalDuration,
         );
@@ -301,7 +402,8 @@ export class BookingService {
   }
 
   private async ensureMonthlyLimit(businessId: string, date: string) {
-    const dateObj = new Date(date);
+    const dateOnly = this.normalizeDateOnly(date);
+    const dateObj = this.calendarDateToUtcDate(dateOnly);
     const monthStart = startOfMonth(dateObj);
     const monthEnd = endOfMonth(dateObj);
 
@@ -344,36 +446,15 @@ export class BookingService {
     });
 
     return bookings.filter((booking) => {
-      const startDate = new Date(booking.date);
-      const [hour, minute] = booking.startTime.split(':').map(Number);
-      startDate.setHours(hour, minute, 0, 0);
-
       const timezone = booking.business.timezone || 'UTC';
-      const startInZone = this.toDateInTimeZone(startDate, timezone);
-      const nowInZone = this.toDateInTimeZone(now, timezone);
-      const targetInZone = this.toDateInTimeZone(targetTime, timezone);
+      const dateOnly = booking.date.toISOString().slice(0, 10);
+      const startUtc = this.zonedDateTimeToUtc(
+        dateOnly,
+        booking.startTime,
+        timezone,
+      );
 
-      return startInZone >= nowInZone && startInZone <= targetInZone;
+      return startUtc >= now && startUtc <= targetTime;
     });
-  }
-
-  private toDateInTimeZone(date: Date, timeZone: string) {
-    const parts = new Intl.DateTimeFormat('en-US', {
-      timeZone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false,
-    }).formatToParts(date);
-
-    const find = (type: string) =>
-      parts.find((p) => p.type === type)?.value || '00';
-
-    return new Date(
-      `${find('year')}-${find('month')}-${find('day')}T${find('hour')}:${find('minute')}:${find('second')}Z`,
-    );
   }
 }

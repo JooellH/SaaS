@@ -12,6 +12,7 @@ import { motion } from "framer-motion";
 interface Business {
   id: string;
   name: string;
+  logoUrl?: string | null;
 }
 
 interface PopularService {
@@ -120,6 +121,11 @@ export default function AnalyticsScreen() {
     );
   }, [data]);
 
+  const selectedBusiness = useMemo(
+    () => businesses.find((b) => b.id === selectedBusinessId) || null,
+    [businesses, selectedBusinessId],
+  );
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -132,21 +138,30 @@ export default function AnalyticsScreen() {
         </div>
         <div className="flex items-center gap-3">
           <label className="text-sm text-slate-200/80">Negocio</label>
-          <Select
-            value={selectedBusinessId}
-            onChange={(e) => setSelectedBusinessId(e.target.value)}
-            className="w-56"
-            disabled={loadingBusinesses}
-          >
-            <option value="" disabled>
-              Selecciona un negocio
-            </option>
-            {businesses.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name}
+          <div className="flex items-center gap-2">
+            {selectedBusiness?.logoUrl ? (
+              <img
+                src={selectedBusiness.logoUrl}
+                alt="Logo"
+                className="h-8 w-8 rounded-lg object-cover border border-white/10 bg-white/5"
+              />
+            ) : null}
+            <Select
+              value={selectedBusinessId}
+              onChange={(e) => setSelectedBusinessId(e.target.value)}
+              className="w-56"
+              disabled={loadingBusinesses}
+            >
+              <option value="" disabled>
+                Selecciona un negocio
               </option>
-            ))}
-          </Select>
+              {businesses.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
+            </Select>
+          </div>
         </div>
       </div>
 

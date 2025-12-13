@@ -7,11 +7,17 @@ import axios from 'axios';
 export class WhatsappService {
   private readonly logger = new Logger(WhatsappService.name);
   private readonly apiUrl = 'https://graph.facebook.com/v18.0';
+  private readonly globalToken: string | null;
 
   constructor(
     private prisma: PrismaService,
     private configService: ConfigService,
-  ) {}
+  ) {
+    this.globalToken =
+      this.configService.get<string>('WHATSAPP_CLOUD_API_TOKEN') ||
+      this.configService.get<string>('WHATSAPP_TOKEN') ||
+      null;
+  }
 
   async sendConfirmation(bookingId: string) {
     const booking = await this.prisma.booking.findUnique({
@@ -59,7 +65,7 @@ export class WhatsappService {
     );
   }
 
-  async sendCancellation(bookingId: string) {
+  async sendCancellation(bookingId: string, reason?: string) {
     const booking = await this.prisma.booking.findUnique({
       where: { id: bookingId },
       include: {
@@ -72,11 +78,16 @@ export class WhatsappService {
 
     const message = `❌ *Reserva Cancelada*\n\nHola ${booking.clientName},\n\nTu reserva ha sido cancelada:\n\n📅 Fecha: ${booking.date.toLocaleDateString()}\n🕐 Hora: ${booking.startTime}\n💼 Servicio: ${booking.service.name}\n\nSi deseas reagendar, contáctanos.`;
 
+    const cleanReason = reason?.trim();
+    const messageWithReason = cleanReason
+      ? `${message}\n\nMotivo: ${cleanReason}`
+      : message;
+
     return this.sendMessage(
       booking.business.whatsappToken,
       booking.business.phoneNumber,
       booking.clientPhone,
-      message,
+      messageWithReason,
       bookingId,
       'cancellation',
     );
@@ -90,7 +101,8 @@ export class WhatsappService {
     bookingId: string,
     type: string,
   ) {
-    if (!token || !phoneNumberId) {
+    const resolvedToken = token || this.globalToken;
+    if (!resolvedToken || !phoneNumberId) {
       this.logger.warn('WhatsApp credentials not configured');
       return this.logMessage(bookingId, type, 'skipped', {
         reason: 'No credentials',
@@ -108,7 +120,7 @@ export class WhatsappService {
         },
         {
           headers: {
-            Authorization: `Bearer ${token}`,
+            Authorization: `Bearer ${resolvedToken}`,
             'Content-Type': 'application/json',
           },
         },

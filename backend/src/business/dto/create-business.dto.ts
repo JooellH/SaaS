@@ -3,7 +3,6 @@ import {
   IsOptional,
   IsString,
   Matches,
-  IsUrl,
   IsHexColor,
 } from 'class-validator';
 
@@ -29,7 +28,10 @@ export class CreateBusinessDto {
   whatsappToken?: string;
 
   @IsOptional()
-  @IsUrl()
+  @IsString()
+  @Matches(/^(https?:\/\/|data:image\/|\/)/, {
+    message: 'logoUrl must be a URL or data image',
+  })
   logoUrl?: string;
 
   @IsOptional()
@@ -37,6 +39,9 @@ export class CreateBusinessDto {
   brandColor?: string;
 
   @IsOptional()
-  @IsUrl()
+  @IsString()
+  @Matches(/^(https?:\/\/|data:image\/|\/)/, {
+    message: 'bannerUrl must be a URL or data image',
+  })
   bannerUrl?: string;
 }

@@ -15,9 +15,31 @@ export const businessSchema = z.object({
   timezone: z.string().min(1),
   phoneNumber: z.string().optional(),
   whatsappToken: z.string().optional(),
-  logoUrl: z.string().url().optional(),
+  logoUrl: z
+    .string()
+    .optional()
+    .refine(
+      (value) =>
+        !value ||
+        value.startsWith("http://") ||
+        value.startsWith("https://") ||
+        value.startsWith("data:image/") ||
+        value.startsWith("/"),
+      { message: "Logo debe ser una URL o imagen (data URL)." },
+    ),
   brandColor: z.string().regex(/^#?[0-9a-fA-F]{6}$/).optional(),
-  bannerUrl: z.string().url().optional(),
+  bannerUrl: z
+    .string()
+    .optional()
+    .refine(
+      (value) =>
+        !value ||
+        value.startsWith("http://") ||
+        value.startsWith("https://") ||
+        value.startsWith("data:image/") ||
+        value.startsWith("/"),
+      { message: "Banner debe ser una URL o imagen (data URL)." },
+    ),
 });
 
 export const serviceSchema = z.object({

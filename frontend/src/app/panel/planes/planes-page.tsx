@@ -16,6 +16,7 @@ interface Business {
   id: string;
   name: string;
   ownerId?: string;
+  logoUrl?: string | null;
 }
 
 interface Plan {
@@ -135,6 +136,11 @@ export default function PlanesScreen() {
     return !!(user?.id && selected?.ownerId && selected.ownerId === user.id);
   }, [businesses, selectedBusinessId, user?.id]);
 
+  const selectedBusiness = useMemo(
+    () => businesses.find((b) => b.id === selectedBusinessId) || null,
+    [businesses, selectedBusinessId],
+  );
+
   const sortedPlans = useMemo(
     () => [...plans].sort((a, b) => a.price - b.price),
     [plans],
@@ -184,21 +190,30 @@ export default function PlanesScreen() {
         </div>
         <div className="flex items-center gap-3">
           <label className="text-sm text-slate-200/80">Negocio</label>
-          <Select
-            value={selectedBusinessId}
-            onChange={(e) => setSelectedBusinessId(e.target.value)}
-            className="w-56"
-            disabled={loadingBusinesses || businesses.length === 0}
-          >
-            <option value="" disabled>
-              Selecciona un negocio
-            </option>
-            {businesses.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name}
+          <div className="flex items-center gap-2">
+            {selectedBusiness?.logoUrl ? (
+              <img
+                src={selectedBusiness.logoUrl}
+                alt="Logo"
+                className="h-8 w-8 rounded-lg object-cover border border-white/10 bg-white/5"
+              />
+            ) : null}
+            <Select
+              value={selectedBusinessId}
+              onChange={(e) => setSelectedBusinessId(e.target.value)}
+              className="w-56"
+              disabled={loadingBusinesses || businesses.length === 0}
+            >
+              <option value="" disabled>
+                Selecciona un negocio
               </option>
-            ))}
-          </Select>
+              {businesses.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
+            </Select>
+          </div>
         </div>
       </div>
 

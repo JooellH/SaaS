@@ -17,6 +17,8 @@ interface Business {
   slug: string;
   createdAt: string;
   ownerId: string;
+  logoUrl?: string | null;
+  bannerUrl?: string | null;
 }
 
 type LostMembership = {
@@ -258,12 +260,30 @@ export default function PanelScreen() {
               variants={fadeIn}
               className="card group relative overflow-hidden"
             >
+              {business.bannerUrl ? (
+                <div
+                  className="absolute inset-0 bg-cover bg-center opacity-70"
+                  style={{ backgroundImage: `url(${business.bannerUrl})` }}
+                />
+              ) : null}
+              {business.bannerUrl ? (
+                <div className="absolute inset-0 bg-slate-950/55" />
+              ) : null}
               <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-indigo-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               <div className="flex items-start justify-between gap-3 relative z-10">
                 <Link href={`/panel/negocio/${business.id}`} className="block">
-                  <h3 className="text-xl font-semibold text-white hover:text-indigo-200 transition-colors">
-                    {business.name}
-                  </h3>
+                  <div className="flex items-center gap-2">
+                    {business.logoUrl ? (
+                      <img
+                        src={business.logoUrl}
+                        alt="Logo"
+                        className="h-8 w-8 rounded-lg object-cover border border-white/10 bg-white/5"
+                      />
+                    ) : null}
+                    <h3 className="text-xl font-semibold text-white hover:text-indigo-200 transition-colors">
+                      {business.name}
+                    </h3>
+                  </div>
                   <p className="text-sm text-slate-400">/{business.slug}</p>
                 </Link>
                 {isOwnerBusiness(business) && (
