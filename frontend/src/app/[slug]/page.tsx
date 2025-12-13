@@ -14,7 +14,6 @@ interface Business {
   slug: string;
   timezone: string;
   logoUrl?: string | null;
-  brandColor?: string | null;
   bannerUrl?: string | null;
 }
 
@@ -122,4 +121,3 @@ export default function PublicBusinessHome() {
     </div>
   );
 }
-

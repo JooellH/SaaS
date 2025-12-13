@@ -3,7 +3,6 @@ import {
   IsOptional,
   IsString,
   Matches,
-  IsHexColor,
 } from 'class-validator';
 
 export class CreateBusinessDto {
@@ -33,10 +32,6 @@ export class CreateBusinessDto {
     message: 'logoUrl must be a URL or data image',
   })
   logoUrl?: string;
-
-  @IsOptional()
-  @IsHexColor()
-  brandColor?: string;
 
   @IsOptional()
   @IsString()

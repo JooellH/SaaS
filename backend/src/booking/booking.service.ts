@@ -107,7 +107,7 @@ export class BookingService {
       dto.businessId,
       dateOnly,
       dto.startTime,
-      service.durationMinutes + service.cleaningTimeMinutes,
+      service.durationMinutes,
     );
 
     if (!isAvailable) {
@@ -223,7 +223,7 @@ export class BookingService {
       booking.businessId,
       dateOnly,
       dto.startTime,
-      service.durationMinutes + service.cleaningTimeMinutes,
+      service.durationMinutes,
       id,
     );
 
@@ -297,16 +297,11 @@ export class BookingService {
         status: { not: 'cancelled' },
         ...(excludeBookingId && { id: { not: excludeBookingId } }),
       },
-      include: {
-        service: true,
-      },
     });
 
     for (const booking of existingBookings) {
       const bookingStart = this.timeToMinutes(booking.startTime);
-      const bookingEnd =
-        this.timeToMinutes(booking.endTime) +
-        booking.service.cleaningTimeMinutes;
+      const bookingEnd = this.timeToMinutes(booking.endTime);
 
       if (
         (startMinutes >= bookingStart && startMinutes < bookingEnd) ||
@@ -339,7 +334,7 @@ export class BookingService {
     if (intervals.length === 0) return [];
 
     const slots: string[] = [];
-    const totalDuration = service.durationMinutes + service.cleaningTimeMinutes;
+    const totalDuration = service.durationMinutes;
 
     for (const interval of intervals) {
       const intervalStart = this.timeToMinutes(interval.start);

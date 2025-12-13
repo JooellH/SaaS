@@ -193,8 +193,7 @@ export default function PublicReservasPage() {
         (s) => s.weekday === weekdayFromISO(form.date),
       );
 
-      const totalDuration =
-        (service?.durationMinutes || 0) + (service?.cleaningTimeMinutes || 0);
+      const totalDuration = service?.durationMinutes || 0;
       const candidates =
         scheduleRow?.isActive && totalDuration > 0
           ? computeCandidateSlots(scheduleRow.intervals || [], totalDuration, 30)
@@ -228,8 +227,7 @@ export default function PublicReservasPage() {
         (s) => s.weekday === weekdayFromISO(actionDate),
       );
 
-      const totalDuration =
-        (service?.durationMinutes || 0) + (service?.cleaningTimeMinutes || 0);
+      const totalDuration = service?.durationMinutes || 0;
       const candidates =
         scheduleRow?.isActive && totalDuration > 0
           ? computeCandidateSlots(scheduleRow.intervals || [], totalDuration, 30)
@@ -382,6 +380,13 @@ export default function PublicReservasPage() {
         date: actionDate,
         startTime: actionTime,
       });
+
+      const svcName = actionBooking.service?.name || "servicio";
+      const [year, month, day] = actionDate.split("-");
+      const formattedDate = `${day}/${month}/${year}`;
+      setSuccess(
+        `Reserva reagendada para ${svcName} el ${formattedDate} a las ${actionTime}. Te vamos a escribir por WhatsApp.`,
+      );
       await loadMyBookings();
       closeAction();
     } catch (err: unknown) {
@@ -801,4 +806,3 @@ export default function PublicReservasPage() {
     </div>
   );
 }
-

@@ -23,7 +23,6 @@ interface Business {
   phoneNumber?: string | null;
   whatsappToken?: string | null;
   logoUrl?: string | null;
-  brandColor?: string | null;
   bannerUrl?: string | null;
 }
 
@@ -42,6 +41,8 @@ export default function AjustesScreen() {
   const [saving, setSaving] = useState(false);
   const [loadingBusiness, setLoadingBusiness] = useState(false);
   const [loadingBusinesses, setLoadingBusinesses] = useState(true);
+  const [logoPreviewError, setLogoPreviewError] = useState(false);
+  const [bannerPreviewError, setBannerPreviewError] = useState(false);
 
   const MAX_LOGO_BYTES = 250 * 1024;
   const MAX_BANNER_BYTES = 900 * 1024;
@@ -60,6 +61,8 @@ export default function AjustesScreen() {
   ) => {
     if (!form || !file) return;
     setError(null);
+    if (field === "logoUrl") setLogoPreviewError(false);
+    if (field === "bannerUrl") setBannerPreviewError(false);
 
     if (!file.type.startsWith("image/")) {
       setError("El archivo debe ser una imagen.");
@@ -83,6 +86,14 @@ export default function AjustesScreen() {
       setError("No se pudo cargar la imagen.");
     }
   };
+
+  useEffect(() => {
+    setLogoPreviewError(false);
+  }, [form?.logoUrl]);
+
+  useEffect(() => {
+    setBannerPreviewError(false);
+  }, [form?.bannerUrl]);
 
   useEffect(() => {
     const loadBusinesses = async () => {
@@ -144,14 +155,6 @@ export default function AjustesScreen() {
     setSuccess(null);
     setSaving(true);
 
-    const rawBrand = form.brandColor?.trim();
-    const normalizedBrandColor =
-      rawBrand && rawBrand.length > 0
-        ? rawBrand.startsWith("#")
-          ? rawBrand
-          : `#${rawBrand}`
-        : undefined;
-
     const parsed = businessSchema.safeParse({
       name: form.name,
       slug: form.slug,
@@ -159,7 +162,6 @@ export default function AjustesScreen() {
       phoneNumber: form.phoneNumber?.trim() || undefined,
       whatsappToken: form.whatsappToken?.trim() || undefined,
       logoUrl: form.logoUrl?.trim() || undefined,
-      brandColor: normalizedBrandColor,
       bannerUrl: form.bannerUrl?.trim() || undefined,
     });
     if (!parsed.success) {
@@ -200,6 +202,9 @@ export default function AjustesScreen() {
                 src={selectedBusiness.logoUrl}
                 alt="Logo"
                 className="h-8 w-8 rounded-lg object-cover border border-white/10 bg-white/5"
+                onError={(e) => {
+                  e.currentTarget.style.display = "none";
+                }}
               />
             ) : null}
             <Select
@@ -324,7 +329,7 @@ export default function AjustesScreen() {
                     <div className="flex gap-2">
                       <Input
                         type="text"
-                        placeholder="https://... o data:image/..."
+                        placeholder="Link directo a imagen (.png/.jpg) o data:image/..."
                         value={form.logoUrl ?? ""}
                         onChange={(e) =>
                           setForm({ ...form, logoUrl: e.target.value })
@@ -347,21 +352,18 @@ export default function AjustesScreen() {
                           src={form.logoUrl}
                           alt="Logo"
                           className="h-16 w-16 rounded-lg object-cover"
+                          onError={() => setLogoPreviewError(true)}
                         />
+                        {logoPreviewError ? (
+                          <div className="mt-2 text-xs text-amber-200/90">
+                            No se pudo cargar el logo. Usá un link directo a la
+                            imagen (ej: termina en .png/.jpg) o subilo desde tu
+                            dispositivo.
+                          </div>
+                        ) : null}
                       </div>
                     ) : null}
                   </div>
-                </motion.div>
-                <motion.div variants={fadeUp} className="space-y-2">
-                  <label className="block text-sm text-slate-200">Color de marca</label>
-                  <Input
-                    type="text"
-                    placeholder="#7c3aed"
-                    value={form.brandColor ?? ""}
-                    onChange={(e) =>
-                      setForm({ ...form, brandColor: e.target.value })
-                    }
-                  />
                 </motion.div>
                 <motion.div variants={fadeUp} className="space-y-2 md:col-span-2">
                   <label className="block text-sm text-slate-200">Banner</label>
@@ -376,7 +378,7 @@ export default function AjustesScreen() {
                     <div className="flex gap-2">
                       <Input
                         type="text"
-                        placeholder="https://... o data:image/..."
+                        placeholder="Link directo a imagen (.png/.jpg) o data:image/..."
                         value={form.bannerUrl ?? ""}
                         onChange={(e) =>
                           setForm({ ...form, bannerUrl: e.target.value })
@@ -399,7 +401,14 @@ export default function AjustesScreen() {
                           src={form.bannerUrl}
                           alt="Banner"
                           className="h-28 w-full rounded-lg object-cover"
+                          onError={() => setBannerPreviewError(true)}
                         />
+                        {bannerPreviewError ? (
+                          <div className="mt-2 text-xs text-amber-200/90">
+                            No se pudo cargar el banner. Usá un link directo a la
+                            imagen o subilo desde tu dispositivo.
+                          </div>
+                        ) : null}
                       </div>
                     ) : null}
                   </div>

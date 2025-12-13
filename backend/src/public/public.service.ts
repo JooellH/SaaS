@@ -19,7 +19,6 @@ export class PublicService {
         phoneNumber: true,
         timezone: true,
         logoUrl: true,
-        brandColor: true,
         bannerUrl: true,
         services: {
           select: {

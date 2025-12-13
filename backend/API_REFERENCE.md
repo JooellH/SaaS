@@ -287,7 +287,6 @@ Returns system-wide error logs from cron jobs.
 ```json
 {
   "logoUrl": "https://example.com/logo.png",
-  "brandColor": "#FF5733",
   "bannerUrl": "https://example.com/banner.jpg"
 }
 ```

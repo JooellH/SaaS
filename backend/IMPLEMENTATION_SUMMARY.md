@@ -121,7 +121,6 @@
 ### 10. **Business Branding**
 - ✅ Campos agregados a Business:
   - `logoUrl`
-  - `brandColor`
   - `bannerUrl`
 - ✅ Actualizable vía PATCH /business/:id
 
@@ -139,7 +138,7 @@
 7. **Subscription** - Suscripciones de negocios
 
 ### Modelos Actualizados:
-- **Business** - Agregados logoUrl, brandColor, bannerUrl, updatedAt
+- **Business** - Agregados logoUrl, bannerUrl, updatedAt
 - **Schedule** - Cambiado a intervals (JSON), agregado isActive
 - **Booking** - Agregado clientEmail, createdAt, updatedAt
 - **Service** - Agregado description, isActive

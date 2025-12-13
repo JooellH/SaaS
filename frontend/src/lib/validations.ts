@@ -27,7 +27,6 @@ export const businessSchema = z.object({
         value.startsWith("/"),
       { message: "Logo debe ser una URL o imagen (data URL)." },
     ),
-  brandColor: z.string().regex(/^#?[0-9a-fA-F]{6}$/).optional(),
   bannerUrl: z
     .string()
     .optional()

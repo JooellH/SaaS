@@ -43,7 +43,6 @@ model Business {
   
   // Branding
   logoUrl       String?
-  brandColor    String?
   bannerUrl     String?
 
   createdAt     DateTime @default(now())

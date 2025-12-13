@@ -278,6 +278,9 @@ export default function PanelScreen() {
                         src={business.logoUrl}
                         alt="Logo"
                         className="h-8 w-8 rounded-lg object-cover border border-white/10 bg-white/5"
+                        onError={(e) => {
+                          e.currentTarget.style.display = "none";
+                        }}
                       />
                     ) : null}
                     <h3 className="text-xl font-semibold text-white hover:text-indigo-200 transition-colors">

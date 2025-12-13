@@ -144,6 +144,9 @@ export default function AnalyticsScreen() {
                 src={selectedBusiness.logoUrl}
                 alt="Logo"
                 className="h-8 w-8 rounded-lg object-cover border border-white/10 bg-white/5"
+                onError={(e) => {
+                  e.currentTarget.style.display = "none";
+                }}
               />
             ) : null}
             <Select
