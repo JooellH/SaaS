@@ -47,7 +47,7 @@ type BillingAccess = {
 };
 
 const limitLabels: Record<string, string> = {
-  maxStaff: "Personal",
+  maxStaff: "Personal (Staff)",
   maxServices: "Servicios",
   maxBookingsPerMonth: "Reservas/mes",
 };

@@ -27,14 +27,14 @@ export class BillingService {
         name: 'Básico',
         price: 0,
         currency: 'USD',
-        limits: { maxStaff: 0, maxServices: 2, maxBookingsPerMonth: 15 },
+        limits: { maxStaff: 0, maxServices: 2, maxBookingsPerMonth: 20 },
       },
       create: {
         id: BASIC_PLAN_ID,
         name: 'Básico',
         price: 0,
         currency: 'USD',
-        limits: { maxStaff: 0, maxServices: 2, maxBookingsPerMonth: 15 },
+        limits: { maxStaff: 0, maxServices: 2, maxBookingsPerMonth: 20 },
       },
     });
 
@@ -44,14 +44,14 @@ export class BillingService {
         name: 'Pro',
         price: 14.99,
         currency: 'USD',
-        limits: { maxStaff: 20, maxServices: 50, maxBookingsPerMonth: 1000 },
+        limits: { maxStaff: 10, maxServices: 30, maxBookingsPerMonth: 1000 },
       },
       create: {
         id: PRO_PLAN_ID,
         name: 'Pro',
         price: 14.99,
         currency: 'USD',
-        limits: { maxStaff: 20, maxServices: 50, maxBookingsPerMonth: 1000 },
+        limits: { maxStaff: 10, maxServices: 30, maxBookingsPerMonth: 1000 },
       },
     });
   }
@@ -100,7 +100,10 @@ export class BillingService {
       : 0;
 
     const subscription = business.subscription ?? null;
-    const paidActive = subscription?.status === 'ACTIVE' ? subscription : null;
+    const paidActive =
+      subscription?.status === 'ACTIVE' && subscription.planId !== BASIC_PLAN_ID
+        ? subscription
+        : null;
 
     const effectivePlan = paidActive
       ? paidActive.plan
@@ -108,8 +111,7 @@ export class BillingService {
         ? proPlan
         : basicPlan;
 
-    const trialExpired =
-      !trialActive && (!paidActive || paidActive.planId === BASIC_PLAN_ID);
+    const trialExpired = !trialActive && !paidActive;
 
     return {
       subscription,

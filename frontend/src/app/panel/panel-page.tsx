@@ -9,12 +9,14 @@ import { Building2, PlusCircle, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Business {
   id: string;
   name: string;
   slug: string;
   createdAt: string;
+  ownerId: string;
 }
 
 type LostMembership = {
@@ -31,11 +33,15 @@ const fadeIn = {
 
 export default function PanelScreen() {
   const searchParams = useSearchParams();
+  const { user } = useAuth();
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [loading, setLoading] = useState(true);
   const [lostMemberships, setLostMemberships] = useState<LostMembership[]>([]);
   const [showLostModal, setShowLostModal] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Business | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [newBusiness, setNewBusiness] = useState({
     name: "",
     slug: "",
@@ -119,11 +125,22 @@ export default function PanelScreen() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("¿Eliminar este negocio y todos sus datos relacionados?"))
-      return;
+  const isOwnerBusiness = (business: Business) =>
+    Boolean(user?.id && business.ownerId === user.id);
+
+  const requestDelete = (business: Business) => {
+    if (!isOwnerBusiness(business)) return;
+    setDeleteError(null);
+    setDeleteTarget(business);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
     try {
-      await api.delete(`/business/${id}`);
+      setDeleteLoading(true);
+      setDeleteError(null);
+      await api.delete(`/business/${deleteTarget.id}`);
+      setDeleteTarget(null);
       loadBusinesses();
     } catch (error: unknown) {
       const message =
@@ -135,7 +152,9 @@ export default function PanelScreen() {
           ? (error as { response: { data: { message: string } } }).response.data
               .message
           : "No se pudo eliminar el negocio";
-      alert(message);
+      setDeleteError(message);
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -194,12 +213,16 @@ export default function PanelScreen() {
                 automáticamente.
               </p>
               <div className="grid grid-cols-2 gap-3 w-full max-w-md mx-auto">
-                <Button onClick={() => setShowModal(true)} variant="secondary">
+                <Button
+                  onClick={() => setShowModal(true)}
+                  variant="secondary"
+                  className="w-full"
+                >
                   Crear mi negocio
                 </Button>
                 <Link
                   href="/panel/planes"
-                  className="btn-primary w-full no-underline hover:no-underline"
+                  className="btn-primary w-full"
                 >
                   Ver planes
                 </Link>
@@ -243,14 +266,16 @@ export default function PanelScreen() {
                   </h3>
                   <p className="text-sm text-slate-400">/{business.slug}</p>
                 </Link>
-                <Button
-                  onClick={() => handleDelete(business.id)}
-                  variant="secondary"
-                  className="flex items-center gap-1 rounded-full border border-red-400/40 bg-red-500/10 px-3 py-1 text-xs font-semibold text-red-200 hover:bg-red-500/20 transition"
-                >
-                  <Trash2 className="w-3 h-3" />
-                  Eliminar
-                </Button>
+                {isOwnerBusiness(business) && (
+                  <Button
+                    onClick={() => requestDelete(business)}
+                    variant="secondary"
+                    className="flex items-center gap-1 rounded-full border border-red-400/40 bg-red-500/10 px-3 py-1 text-xs font-semibold text-red-200 hover:bg-red-500/20 transition"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    Eliminar
+                  </Button>
+                )}
               </div>
               <div className="flex flex-wrap items-center gap-3 mt-4 text-sm text-indigo-100">
                 <Link
@@ -382,6 +407,96 @@ export default function PanelScreen() {
                   </Button>
                 </div>
               </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {deleteTarget && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur"
+            onClick={() => {
+              if (deleteLoading) return;
+              setDeleteTarget(null);
+              setDeleteError(null);
+            }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 10 }}
+              transition={{ type: "spring", stiffness: 220, damping: 20 }}
+              className="w-full max-w-lg rounded-3xl bg-slate-900/80 border border-white/10 shadow-2xl shadow-red-500/15 p-6 space-y-4"
+              role="dialog"
+              aria-modal="true"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-2xl bg-red-500/10 border border-red-400/20">
+                    <Trash2 className="h-5 w-5 text-red-200" />
+                  </div>
+                  <div className="space-y-1">
+                    <h2 className="text-2xl font-semibold text-white">
+                      Eliminar negocio
+                    </h2>
+                    <p className="text-sm text-slate-300">
+                      Vas a eliminar{" "}
+                      <span className="font-semibold text-white">
+                        &quot;{deleteTarget.name}&quot;
+                      </span>{" "}
+                      y todos sus datos relacionados (reservas, servicios,
+                      horarios y personal).
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  onClick={() => {
+                    if (deleteLoading) return;
+                    setDeleteTarget(null);
+                    setDeleteError(null);
+                  }}
+                  variant="ghost"
+                  className="text-sm"
+                >
+                  Cerrar
+                </Button>
+              </div>
+
+              {deleteError && (
+                <div className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-100">
+                  {deleteError}
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-2">
+                <Button
+                  type="button"
+                  onClick={() => {
+                    if (deleteLoading) return;
+                    setDeleteTarget(null);
+                    setDeleteError(null);
+                  }}
+                  variant="secondary"
+                  className="flex-1"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="button"
+                  onClick={confirmDelete}
+                  disabled={deleteLoading}
+                  variant="secondary"
+                  className="flex-1 border border-red-400/40 bg-red-500/15 text-red-100 hover:bg-red-500/25"
+                >
+                  {deleteLoading ? "Eliminando..." : "Eliminar"}
+                </Button>
+              </div>
             </motion.div>
           </motion.div>
         )}
