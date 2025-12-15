@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { BookingService } from '../booking/booking.service';
 
@@ -135,7 +139,11 @@ export class PublicService {
     return booking;
   }
 
-  async cancelClientBooking(slug: string, bookingId: string, clientKey: string) {
+  async cancelClientBooking(
+    slug: string,
+    bookingId: string,
+    clientKey: string,
+  ) {
     await this.requireClientBooking(slug, bookingId, clientKey);
     return this.bookingService.cancel(bookingId, { cancelledBy: 'CLIENT' });
   }

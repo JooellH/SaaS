@@ -6,4 +6,3 @@ export class PublicBookingCancelDto {
   @MaxLength(200)
   clientKey: string;
 }
-

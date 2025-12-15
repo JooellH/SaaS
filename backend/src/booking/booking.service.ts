@@ -79,7 +79,9 @@ export class BookingService {
   ): Date {
     const [year, month, day] = dateOnly.split('-').map(Number);
     const [hour, minute] = time.split(':').map(Number);
-    const baseUtc = new Date(Date.UTC(year, month - 1, day, hour, minute, 0, 0));
+    const baseUtc = new Date(
+      Date.UTC(year, month - 1, day, hour, minute, 0, 0),
+    );
 
     const offset1 = this.getTimeZoneOffsetMs(baseUtc, timeZone);
     let result = new Date(baseUtc.getTime() - offset1);
@@ -115,7 +117,10 @@ export class BookingService {
     }
 
     // Calculate end time
-    const endTime = this.endTimeFromStart(dto.startTime, service.durationMinutes);
+    const endTime = this.endTimeFromStart(
+      dto.startTime,
+      service.durationMinutes,
+    );
 
     const booking = await this.prisma.booking.create({
       data: {
@@ -180,7 +185,7 @@ export class BookingService {
       typeof existing.metadata === 'object' &&
       existing.metadata !== null &&
       !Array.isArray(existing.metadata)
-        ? (existing.metadata as Prisma.JsonObject)
+        ? existing.metadata
         : ({} as Prisma.JsonObject);
 
     const cleanReason = opts?.reason?.trim();
@@ -231,7 +236,10 @@ export class BookingService {
       throw new BadRequestException('Time slot not available');
     }
 
-    const endTime = this.endTimeFromStart(dto.startTime, service.durationMinutes);
+    const endTime = this.endTimeFromStart(
+      dto.startTime,
+      service.durationMinutes,
+    );
 
     const updated = await this.prisma.booking.update({
       where: { id },

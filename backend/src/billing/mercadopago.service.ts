@@ -2,17 +2,22 @@ import {
   Injectable,
   Logger,
   ServiceUnavailableException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import type { Request as ExpressRequest } from 'express';
 import axios from 'axios';
 import type { Prisma } from '@prisma/client';
+import { createHmac } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { BillingService } from './billing.service';
 
 const BASIC_PLAN_ID = 'plan_basic';
 const PRO_PLAN_ID = 'plan_pro';
 
-type MercadoPagoWebhookRequest = Pick<ExpressRequest, 'body' | 'query'>;
+export type MercadoPagoWebhookRequest = Pick<
+  ExpressRequest,
+  'body' | 'query' | 'headers'
+>;
 
 type PreapprovalStatus = 'authorized' | 'paused' | 'cancelled' | 'finished';
 
@@ -42,6 +47,62 @@ export class MercadoPagoService {
       process.env.FRONTEND_URL?.split(',')[0] ??
       'http://localhost:4200';
     return fromEnv.trim().replace(/\/+$/, '');
+  }
+
+  private getMPWebhookSecret(): string {
+    const secret = process.env.MP_WEBHOOK_SECRET;
+    if (!secret) {
+      this.logger.warn(
+        'MP_WEBHOOK_SECRET not configured. Webhooks will not be validated.',
+      );
+      return '';
+    }
+    return secret;
+  }
+
+  private validateWebhookSignature(req: MercadoPagoWebhookRequest): boolean {
+    const secret = this.getMPWebhookSecret();
+    if (!secret) {
+      // Si no hay secret configurado, logueamos una advertencia pero permitimos el webhook
+      this.logger.warn(
+        'Webhook validation skipped: MP_WEBHOOK_SECRET not configured',
+      );
+      return true;
+    }
+
+    const xSignature = (req.headers?.['x-signature'] as string) || '';
+    const xRequestId = (req.headers?.['x-request-id'] as string) || '';
+
+    if (!xSignature || !xRequestId) {
+      this.logger.error('Missing webhook headers: x-signature or x-request-id');
+      throw new UnauthorizedException('Invalid webhook signature');
+    }
+
+    // Obtener el timestamp de la query
+    const timestamp = (req.query?.timestamp as string) || '';
+    if (!timestamp) {
+      this.logger.error('Missing timestamp in webhook query');
+      throw new UnauthorizedException('Invalid webhook signature');
+    }
+
+    // Construir el string para firmar: id.timestamp
+    const dataToSign = `${xRequestId}.${timestamp}`;
+
+    // Calcular HMAC-SHA256
+    const hmac = createHmac('sha256', secret);
+    hmac.update(dataToSign);
+    const signature = hmac.digest('hex');
+
+    // Comparar firmas
+    if (signature !== xSignature) {
+      this.logger.error(
+        `Invalid webhook signature. Expected: ${signature}, Got: ${xSignature}`,
+      );
+      throw new UnauthorizedException('Invalid webhook signature');
+    }
+
+    this.logger.debug('Webhook signature validated successfully');
+    return true;
   }
 
   async createCheckoutSession(input: {
@@ -121,6 +182,9 @@ export class MercadoPagoService {
   }
 
   async handleWebhook(req: MercadoPagoWebhookRequest) {
+    // Validar firma del webhook
+    this.validateWebhookSignature(req);
+
     const { type, 'data.id': dataId } = (req.body || {}) as {
       type?: string;
       'data.id'?: string;

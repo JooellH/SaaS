@@ -5,7 +5,9 @@ import { BillingService } from '../billing/billing.service';
 import { BusinessService } from '../business/business.service';
 import type { Request as ExpressRequest } from 'express';
 
-type AuthedRequest = ExpressRequest & { user: { userId: string; email?: string } };
+type AuthedRequest = ExpressRequest & {
+  user: { userId: string; email?: string };
+};
 
 @Controller('analytics')
 export class AnalyticsController {

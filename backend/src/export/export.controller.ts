@@ -1,4 +1,11 @@
-import { Controller, Get, Param, Res, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  Res,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { ExportService } from './export.service';
 import type { Response } from 'express';
 import { AuthGuard } from '@nestjs/passport';
@@ -6,7 +13,9 @@ import { BillingService } from '../billing/billing.service';
 import { BusinessService } from '../business/business.service';
 import type { Request as ExpressRequest } from 'express';
 
-type AuthedRequest = ExpressRequest & { user: { userId: string; email?: string } };
+type AuthedRequest = ExpressRequest & {
+  user: { userId: string; email?: string };
+};
 
 @Controller('export')
 export class ExportController {

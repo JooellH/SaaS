@@ -14,4 +14,3 @@ export class PublicBookingRescheduleDto {
   @IsString()
   startTime: string;
 }
-

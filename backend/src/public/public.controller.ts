@@ -26,7 +26,11 @@ export class PublicController {
     @Param('bookingId') bookingId: string,
     @Body() dto: PublicBookingCancelDto,
   ) {
-    return this.publicService.cancelClientBooking(slug, bookingId, dto.clientKey);
+    return this.publicService.cancelClientBooking(
+      slug,
+      bookingId,
+      dto.clientKey,
+    );
   }
 
   @Patch(':slug/bookings/:bookingId/reschedule')

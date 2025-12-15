@@ -19,7 +19,9 @@ import { AuthGuard } from '@nestjs/passport';
 import { BusinessService } from '../business/business.service';
 import type { Request as ExpressRequest } from 'express';
 
-type AuthedRequest = ExpressRequest & { user: { userId: string; email?: string } };
+type AuthedRequest = ExpressRequest & {
+  user: { userId: string; email?: string };
+};
 
 @Controller('business/:businessId/staff')
 export class StaffController {
