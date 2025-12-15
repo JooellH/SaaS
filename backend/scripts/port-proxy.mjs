@@ -2,7 +2,7 @@ import net from "node:net";
 
 const targetPort = Number.parseInt(process.env.PORT || "3000", 10);
 const proxyPortsRaw =
-  process.env.RAILWAY_PROXY_PORTS || "3000,8080,4080,8090";
+  process.env.RAILWAY_PROXY_PORTS || "3000,8000,8080,4080";
 
 const proxyPorts = proxyPortsRaw
   .split(",")
