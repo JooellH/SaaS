@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
+import type { Prisma } from '@prisma/client';
 
 @Injectable()
 export class WhatsappService {
@@ -9,6 +10,7 @@ export class WhatsappService {
   private readonly apiUrl = 'https://graph.facebook.com/v18.0';
   private readonly globalToken: string | null;
   private readonly ownerNotifyTo: string | null;
+  private readonly globalPhoneNumberId: string | null;
 
   constructor(
     private prisma: PrismaService,
@@ -21,6 +23,12 @@ export class WhatsappService {
 
     this.ownerNotifyTo =
       this.configService.get<string>('WHATSAPP_OWNER_NOTIFY_TO') || null;
+
+    // Permite tener un único número global de WhatsApp Cloud API
+    // para todos los negocios. Si un negocio no tiene su propio
+    // phoneNumberId configurado, usamos este valor.
+    this.globalPhoneNumberId =
+      this.configService.get<string>('WHATSAPP_GLOBAL_PHONE_NUMBER_ID') || null;
   }
 
   async sendConfirmation(bookingId: string) {
@@ -125,7 +133,9 @@ export class WhatsappService {
     type: string,
   ) {
     const resolvedToken = token || this.globalToken;
-    if (!resolvedToken || !phoneNumberId) {
+    const resolvedPhoneNumberId = phoneNumberId || this.globalPhoneNumberId;
+
+    if (!resolvedToken || !resolvedPhoneNumberId) {
       this.logger.warn('WhatsApp credentials not configured');
       return this.logMessage(bookingId, type, 'skipped', {
         reason: 'No credentials',
@@ -133,8 +143,8 @@ export class WhatsappService {
     }
 
     try {
-      const response = await axios.post(
-        `${this.apiUrl}/${phoneNumberId}/messages`,
+      const response = await axios.post<unknown>(
+        `${this.apiUrl}/${resolvedPhoneNumberId}/messages`,
         {
           messaging_product: 'whatsapp',
           to: to.replace(/\D/g, ''),
@@ -149,14 +159,22 @@ export class WhatsappService {
         },
       );
 
-      await this.logMessage(bookingId, type, 'sent', response.data);
-      return { success: true, data: response.data };
-    } catch (error) {
-      this.logger.error(`Failed to send WhatsApp message: ${error.message}`);
+      const data = response.data as Prisma.JsonValue;
+
+      await this.logMessage(
+        bookingId,
+        type,
+        'sent',
+        data as Prisma.InputJsonValue,
+      );
+      return { success: true, data };
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Failed to send WhatsApp message: ${message}`);
       await this.logMessage(bookingId, type, 'failed', {
-        error: error.message,
-      });
-      return { success: false, error: error.message };
+        error: message,
+      } as Prisma.InputJsonValue);
+      return { success: false, error: message };
     }
   }
 
@@ -164,7 +182,7 @@ export class WhatsappService {
     bookingId: string,
     type: string,
     status: string,
-    rawResponse: any,
+    rawResponse: Prisma.InputJsonValue | undefined,
   ) {
     return this.prisma.messageLog.create({
       data: {
