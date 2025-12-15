@@ -1,96 +1,86 @@
 import { NextRequest } from "next/server";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-function getBackendBaseUrl() {
-  return (process.env.BACKEND_URL || "http://localhost:3000").replace(/\/$/, "");
-}
+type RouteContext = { params: Promise<{ path?: string[] }> };
 
-function cloneHeaders(request: NextRequest) {
-  const headers = new Headers(request.headers);
+const getBackendBaseUrl = () => {
+  const raw =
+    process.env.BACKEND_URL ||
+    process.env.INTERNAL_BACKEND_URL ||
+    process.env.NEXT_PUBLIC_API_URL ||
+    "http://localhost:3000";
+  return raw.replace(/\/+$/, "");
+};
+
+const toBackendApiUrl = (req: NextRequest, pathSegments: string[]) => {
+  const incoming = new URL(req.url);
+  const backendBase = getBackendBaseUrl();
+  const base = backendBase.endsWith("/api")
+    ? backendBase.slice(0, -4)
+    : backendBase;
+  const path = pathSegments.join("/");
+  return `${base}/api/${path}${incoming.search}`;
+};
+
+const proxy = async (req: NextRequest, pathSegments: string[]) => {
+  const url = toBackendApiUrl(req, pathSegments);
+
+  const headers = new Headers(req.headers);
   headers.delete("host");
   headers.delete("connection");
-  headers.delete("content-length");
-  return headers;
-}
 
-async function proxy(request: NextRequest, pathSegments: string[]) {
-  const backendBaseUrl = getBackendBaseUrl();
-  const path = pathSegments.join("/");
-  const target = new URL(`${backendBaseUrl}/api/${path}`);
+  const method = req.method.toUpperCase();
+  const body =
+    method === "GET" || method === "HEAD"
+      ? undefined
+      : await req.arrayBuffer();
 
-  request.nextUrl.searchParams.forEach((value, key) => {
-    target.searchParams.append(key, value);
+  const upstream = await fetch(url, {
+    method,
+    headers,
+    body,
+    redirect: "manual",
   });
 
-  const init: RequestInit = {
-    method: request.method,
-    headers: cloneHeaders(request),
-    redirect: "manual",
-  };
-
-  if (request.method !== "GET" && request.method !== "HEAD") {
-    init.body = await request.arrayBuffer();
-  }
-
-  const response = await fetch(target, init);
-
-  const responseHeaders = new Headers(response.headers);
+  const responseHeaders = new Headers(upstream.headers);
   responseHeaders.delete("content-encoding");
   responseHeaders.delete("content-length");
-  responseHeaders.delete("connection");
 
-  return new Response(response.body, {
-    status: response.status,
-    statusText: response.statusText,
+  return new Response(upstream.body, {
+    status: upstream.status,
     headers: responseHeaders,
   });
+};
+
+export async function GET(req: NextRequest, ctx: RouteContext) {
+  const { path = [] } = await ctx.params;
+  return proxy(req, path);
 }
 
-export async function GET(
-  request: NextRequest,
-  context: { params: Promise<{ path: string[] }> },
-) {
-  const { path } = await context.params;
-  return proxy(request, path);
+export async function POST(req: NextRequest, ctx: RouteContext) {
+  const { path = [] } = await ctx.params;
+  return proxy(req, path);
 }
 
-export async function POST(
-  request: NextRequest,
-  context: { params: Promise<{ path: string[] }> },
-) {
-  const { path } = await context.params;
-  return proxy(request, path);
+export async function PATCH(req: NextRequest, ctx: RouteContext) {
+  const { path = [] } = await ctx.params;
+  return proxy(req, path);
 }
 
-export async function PATCH(
-  request: NextRequest,
-  context: { params: Promise<{ path: string[] }> },
-) {
-  const { path } = await context.params;
-  return proxy(request, path);
+export async function PUT(req: NextRequest, ctx: RouteContext) {
+  const { path = [] } = await ctx.params;
+  return proxy(req, path);
 }
 
-export async function PUT(
-  request: NextRequest,
-  context: { params: Promise<{ path: string[] }> },
-) {
-  const { path } = await context.params;
-  return proxy(request, path);
+export async function DELETE(req: NextRequest, ctx: RouteContext) {
+  const { path = [] } = await ctx.params;
+  return proxy(req, path);
 }
 
-export async function DELETE(
-  request: NextRequest,
-  context: { params: Promise<{ path: string[] }> },
-) {
-  const { path } = await context.params;
-  return proxy(request, path);
+export async function OPTIONS(req: NextRequest, ctx: RouteContext) {
+  const { path = [] } = await ctx.params;
+  return proxy(req, path);
 }
 
-export async function OPTIONS(
-  request: NextRequest,
-  context: { params: Promise<{ path: string[] }> },
-) {
-  const { path } = await context.params;
-  return proxy(request, path);
-}
