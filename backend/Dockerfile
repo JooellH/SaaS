@@ -27,6 +27,7 @@ RUN npm ci --omit=dev
 RUN DATABASE_URL="postgresql://postgres:postgres@localhost:5432/postgres" npx prisma generate
 
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/scripts ./scripts
 
-EXPOSE 3000 8080 4080
+EXPOSE 3000 8080 4080 8090
 CMD ["sh", "-c", "node scripts/port-proxy.mjs & npx prisma migrate deploy && node dist/src/main"]
