@@ -5,19 +5,19 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 Starting seed...');
 
-  // Create default plans
+  // Create default plans in ARS (Argentine Pesos) - Mercado Pago requires minimum $15 ARS
   const basicPlan = await prisma.plan.upsert({
     where: { id: 'plan_basic' },
     update: {},
     create: {
       id: 'plan_basic',
       name: 'Basic',
-      price: 29.99,
-      currency: 'USD',
+      price: 0,
+      currency: 'ARS',
       limits: {
-        maxStaff: 3,
-        maxServices: 5,
-        maxBookingsPerMonth: 50,
+        maxStaff: 1,
+        maxServices: 2,
+        maxBookingsPerMonth: 20,
       },
     },
   });
@@ -28,12 +28,12 @@ async function main() {
     create: {
       id: 'plan_pro',
       name: 'Pro',
-      price: 79.99,
-      currency: 'USD',
+      price: 1500,
+      currency: 'ARS',
       limits: {
         maxStaff: 10,
-        maxServices: 20,
-        maxBookingsPerMonth: 200,
+        maxServices: 30,
+        maxBookingsPerMonth: 1000,
       },
     },
   });
@@ -44,8 +44,8 @@ async function main() {
     create: {
       id: 'plan_enterprise',
       name: 'Enterprise',
-      price: 199.99,
-      currency: 'USD',
+      price: 3000,
+      currency: 'ARS',
       limits: {
         maxStaff: -1, // unlimited
         maxServices: -1,
