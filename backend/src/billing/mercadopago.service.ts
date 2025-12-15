@@ -10,6 +10,7 @@ import type { Prisma } from '@prisma/client';
 import { createHmac } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { BillingService } from './billing.service';
+import { ExchangeRateService } from '../exchange-rate/exchange-rate.service';
 
 const BASIC_PLAN_ID = 'plan_basic';
 const PRO_PLAN_ID = 'plan_pro';
@@ -29,6 +30,7 @@ export class MercadoPagoService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly billingService: BillingService,
+    private readonly exchangeRateService: ExchangeRateService,
   ) {}
 
   private getAccessToken(): string {
@@ -122,6 +124,10 @@ export class MercadoPagoService {
 
     const accessToken = this.getAccessToken();
 
+    // Convert price to ARS
+    const rate = await this.exchangeRateService.getRate('ARS');
+    const amountInArs = Math.round(plan.price * rate * 100) / 100; // Plan price (USD) * Rate
+
     const reason = `Suscripción Pro - Reserva`;
 
     const body = {
@@ -129,7 +135,7 @@ export class MercadoPagoService {
       auto_recurring: {
         frequency: 1,
         frequency_type: 'months',
-        transaction_amount: Math.round(plan.price * 100) / 100, // Ensure proper decimal places
+        transaction_amount: amountInArs,
         currency_id: 'ARS',
         start_date: new Date().toISOString(), // Required field
       },

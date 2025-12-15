@@ -56,51 +56,56 @@ export class ExchangeRateService {
   }
 
   private async fetchExchangeRates(): Promise<Record<string, number> | null> {
+    // 1. Try ExchangeRate-API (Open & Reliable for standard usage)
     try {
-      const response = await axios.get<{ data: Record<string, number> }>(
-        'https://api.freecurrencyapi.com/v1/latest',
-        {
-          params: {
-            base_currency: 'USD',
-            currencies: this.mpCurrencies.join(','),
-          },
-          timeout: 10000,
-        },
-      );
+      this.logger.debug('Fetching rates from ExchangeRate-API...');
+      const response = await axios.get<{
+        rates: Record<string, number>;
+      }>('https://api.exchangerate-api.com/v4/latest/USD', {
+        timeout: 10000,
+      });
 
-      if (response.data && response.data.data) {
-        return response.data.data;
+      if (response.data && response.data.rates) {
+        const filtered: Record<string, number> = {};
+        for (const currency of this.mpCurrencies) {
+          if (response.data.rates[currency]) {
+            filtered[currency] = response.data.rates[currency];
+          }
+        }
+        return filtered;
       }
     } catch (err) {
-      this.logger.debug(
-        'Free API failed, attempting alternative source:',
+      this.logger.warn(
+        'ExchangeRate-API failed, attempting alternative source:',
         err instanceof AxiosError ? err.message : 'Unknown error',
       );
+    }
 
+    // 2. Fallback: FreeCurrencyAPI (Requires API Key)
+    const apiKey = process.env.FREECURRENCYAPI_KEY;
+    if (apiKey) {
       try {
-        const fallbackResponse = await axios.get<{
-          rates: Record<string, number>;
-        }>('https://api.exchangerate-api.com/v4/latest/USD', {
-          timeout: 10000,
-        });
-
-        if (fallbackResponse.data && fallbackResponse.data.rates) {
-          const filtered: Record<string, number> = {};
-          for (const currency of this.mpCurrencies) {
-            if (fallbackResponse.data.rates[currency]) {
-              filtered[currency] = fallbackResponse.data.rates[currency];
-            }
-          }
-          return filtered;
-        }
-      } catch (fallbackError) {
-        this.logger.warn(
-          'Fallback API also failed:',
-          fallbackError instanceof AxiosError
-            ? fallbackError.message
-            : 'Unknown error',
+        this.logger.debug('Fetching rates from FreeCurrencyAPI...');
+        const response = await axios.get<{ data: Record<string, number> }>(
+          'https://api.freecurrencyapi.com/v1/latest',
+          {
+            params: {
+              apikey: apiKey,
+              base_currency: 'USD',
+              currencies: this.mpCurrencies.join(','),
+            },
+            timeout: 10000,
+          },
         );
-        return null;
+
+        if (response.data && response.data.data) {
+          return response.data.data;
+        }
+      } catch (err) {
+        this.logger.warn(
+          'FreeCurrencyAPI failed:',
+          err instanceof AxiosError ? err.message : 'Unknown error',
+        );
       }
     }
 
@@ -133,12 +138,12 @@ export class ExchangeRateService {
 
   private getFallbackRate(currency: string): number {
     const fallbackRates: Record<string, number> = {
-      ARS: 1020,
-      BRL: 5.25,
-      MXN: 17.5,
-      COP: 3800,
-      PEN: 3.5,
-      CLP: 950,
+      ARS: 1050, // Updated approximate rate
+      BRL: 5.75,
+      MXN: 18.5,
+      COP: 4100,
+      PEN: 3.75,
+      CLP: 980,
       UYU: 42,
       VES: 36,
     };
