@@ -18,6 +18,7 @@ import { AvailabilityModule } from './availability/availability.module';
 import { ExportModule } from './export/export.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { BillingModule } from './billing/billing.module';
+import { ExchangeRateModule } from './exchange-rate/exchange-rate.module';
 import { RateLimitMiddleware } from './common/middleware/rate-limit.middleware';
 import { SecurityMiddleware } from './common/middleware/security.middleware';
 import { ScheduleModule as NestScheduleModule } from '@nestjs/schedule';
@@ -45,6 +46,7 @@ import { ScheduleModule as NestScheduleModule } from '@nestjs/schedule';
     ExportModule,
     AnalyticsModule,
     BillingModule,
+    ExchangeRateModule,
   ],
   controllers: [AppController],
   providers: [AppService],

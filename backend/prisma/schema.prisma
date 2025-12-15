@@ -227,3 +227,12 @@ model Subscription {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @default(now()) @updatedAt
 }
+model ExchangeRate {
+  id        String @id @default(cuid())
+  currency  String // e.g., "ARS", "BRL", "MXN", etc.
+  rate      Float  // Exchange rate: 1 USD = X currency units
+  source    String @default("openexchangerates") // API source
+  updatedAt DateTime @default(now()) @updatedAt
+  
+  @@unique([currency])
+}
