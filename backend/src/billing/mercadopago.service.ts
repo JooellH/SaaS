@@ -122,64 +122,79 @@ export class MercadoPagoService {
 
     const accessToken = this.getAccessToken();
 
-    const reason = `Suscripción Pro - Negocio ${input.businessId}`;
+    const reason = `Suscripción Pro - Reserva`;
 
     const body = {
       reason,
       auto_recurring: {
         frequency: 1,
         frequency_type: 'months',
-        transaction_amount: plan.price,
-        currency_id: plan.currency ?? 'ARS',
+        transaction_amount: Math.round(plan.price * 100) / 100, // Ensure proper decimal places
+        currency_id: 'ARS',
+        start_date: new Date().toISOString(), // Required field
       },
       back_url: `${frontendUrl}/panel/planes?businessId=${input.businessId}&checkout=success`,
       notification_url: `${process.env.PUBLIC_BACKEND_URL ?? process.env.BACKEND_URL ?? 'http://localhost:3000'}/billing/webhook/mercadopago`,
-      payer_email: input.customerEmail,
+      payer_email: input.customerEmail || 'no-email@example.com', // MP requires email
       external_reference: input.businessId,
     };
 
-    const response = await axios.post(`${this.apiBase}/preapproval`, body, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-    });
+    try {
+      const response = await axios.post(`${this.apiBase}/preapproval`, body, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
 
-    const { init_point, sandbox_init_point, id } = response.data as {
-      init_point?: string;
-      sandbox_init_point?: string;
-      id: string;
-    };
+      const { init_point, sandbox_init_point, id } = response.data as {
+        init_point?: string;
+        sandbox_init_point?: string;
+        id: string;
+      };
 
-    const url = init_point || sandbox_init_point;
-    if (!url) {
-      throw new ServiceUnavailableException(
-        'Mercado Pago no devolvió URL de checkout.',
-      );
+      const url = init_point || sandbox_init_point;
+      if (!url) {
+        throw new ServiceUnavailableException(
+          'Mercado Pago no devolvió URL de checkout.',
+        );
+      }
+
+      // Guardamos mpPreapprovalId en la suscripción local para referencia
+      const updateData = {
+        planId: PRO_PLAN_ID,
+        status: 'ACTIVE',
+        mpPreapprovalId: id,
+      } as unknown as Prisma.SubscriptionUncheckedUpdateInput;
+
+      const createData = {
+        businessId: input.businessId,
+        planId: PRO_PLAN_ID,
+        status: 'ACTIVE',
+        startDate: new Date(),
+        mpPreapprovalId: id,
+      } as unknown as Prisma.SubscriptionUncheckedCreateInput;
+
+      await this.prisma.subscription.upsert({
+        where: { businessId: input.businessId },
+        update: updateData,
+        create: createData,
+      });
+
+      return { url };
+    } catch (error) {
+      const axiosError = error as any;
+      if (axiosError.response?.status === 400) {
+        this.logger.error(
+          'Mercado Pago validation error:',
+          axiosError.response.data,
+        );
+        throw new ServiceUnavailableException(
+          `Error en Mercado Pago: ${axiosError.response.data?.message || 'Invalid request'}`,
+        );
+      }
+      throw error;
     }
-
-    // Guardamos mpPreapprovalId en la suscripción local para referencia
-    const updateData = {
-      planId: PRO_PLAN_ID,
-      status: 'ACTIVE',
-      mpPreapprovalId: id,
-    } as unknown as Prisma.SubscriptionUncheckedUpdateInput;
-
-    const createData = {
-      businessId: input.businessId,
-      planId: PRO_PLAN_ID,
-      status: 'ACTIVE',
-      startDate: new Date(),
-      mpPreapprovalId: id,
-    } as unknown as Prisma.SubscriptionUncheckedCreateInput;
-
-    await this.prisma.subscription.upsert({
-      where: { businessId: input.businessId },
-      update: updateData,
-      create: createData,
-    });
-
-    return { url };
   }
 
   async handleWebhook(req: MercadoPagoWebhookRequest) {
