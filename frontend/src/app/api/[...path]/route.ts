@@ -7,8 +7,8 @@ type RouteContext = { params: Promise<{ path?: string[] }> };
 
 const getBackendBaseUrl = () => {
   const raw =
-    process.env.BACKEND_URL ||
     process.env.INTERNAL_BACKEND_URL ||
+    process.env.BACKEND_URL ||
     process.env.NEXT_PUBLIC_API_URL ||
     "http://localhost:3000";
   return raw.replace(/\/+$/, "");
@@ -83,4 +83,3 @@ export async function OPTIONS(req: NextRequest, ctx: RouteContext) {
   const { path = [] } = await ctx.params;
   return proxy(req, path);
 }
-

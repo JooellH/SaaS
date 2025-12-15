@@ -28,5 +28,5 @@ RUN DATABASE_URL="postgresql://postgres:postgres@localhost:5432/postgres" npx pr
 
 COPY --from=builder /app/dist ./dist
 
-EXPOSE 3000
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/src/main"]
+EXPOSE 3000 8080 4080
+CMD ["sh", "-c", "node scripts/port-proxy.mjs & npx prisma migrate deploy && node dist/src/main"]
