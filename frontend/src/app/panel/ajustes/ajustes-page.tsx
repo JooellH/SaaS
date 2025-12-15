@@ -302,11 +302,127 @@ export default function AjustesScreen() {
                     value={form.timezone}
                     onChange={(e) => setForm({ ...form, timezone: e.target.value })}
                   >
-                    <option value="America/Argentina/Buenos_Aires">
-                      America/Argentina/Buenos_Aires
-                    </option>
-                    <option value="America/Mexico_City">America/Mexico_City</option>
-                    <option value="America/Bogota">America/Bogota</option>
+                    <optgroup label="Sudamérica">
+                      <option value="America/Argentina/Buenos_Aires">
+                        Argentina - Buenos Aires (UTC-3)
+                      </option>
+                      <option value="America/Argentina/Catamarca">
+                        Argentina - Catamarca (UTC-3)
+                      </option>
+                      <option value="America/Argentina/Cordoba">
+                        Argentina - Córdoba (UTC-3)
+                      </option>
+                      <option value="America/Argentina/Jujuy">
+                        Argentina - Jujuy (UTC-3)
+                      </option>
+                      <option value="America/Argentina/La_Rioja">
+                        Argentina - La Rioja (UTC-3)
+                      </option>
+                      <option value="America/Argentina/Mendoza">
+                        Argentina - Mendoza (UTC-3)
+                      </option>
+                      <option value="America/Argentina/Rio_Gallegos">
+                        Argentina - Río Gallegos (UTC-3)
+                      </option>
+                      <option value="America/Argentina/Salta">
+                        Argentina - Salta (UTC-3)
+                      </option>
+                      <option value="America/Argentina/San_Juan">
+                        Argentina - San Juan (UTC-3)
+                      </option>
+                      <option value="America/Argentina/San_Luis">
+                        Argentina - San Luis (UTC-3)
+                      </option>
+                      <option value="America/Argentina/Tucuman">
+                        Argentina - Tucumán (UTC-3)
+                      </option>
+                      <option value="America/Bolivia">
+                        Bolivia - La Paz (UTC-4)
+                      </option>
+                      <option value="America/Sao_Paulo">
+                        Brasil - São Paulo (UTC-3)
+                      </option>
+                      <option value="America/Manaus">
+                        Brasil - Manaos (UTC-4)
+                      </option>
+                      <option value="America/Belém">
+                        Brasil - Belém (UTC-3)
+                      </option>
+                      <option value="America/Fortaleza">
+                        Brasil - Fortaleza (UTC-3)
+                      </option>
+                      <option value="America/Recife">
+                        Brasil - Recife (UTC-3)
+                      </option>
+                      <option value="America/Bahia">
+                        Brasil - Bahía (UTC-3)
+                      </option>
+                      <option value="America/Araguaina">
+                        Brasil - Araguaína (UTC-3)
+                      </option>
+                      <option value="America/Maceio">
+                        Brasil - Maceió (UTC-3)
+                      </option>
+                      <option value="America/Santarem">
+                        Brasil - Santarém (UTC-3)
+                      </option>
+                      <option value="America/Campo_Grande">
+                        Brasil - Campo Grande (UTC-4)
+                      </option>
+                      <option value="America/Cuiaba">
+                        Brasil - Cuiabá (UTC-4)
+                      </option>
+                      <option value="America/Boa_Vista">
+                        Brasil - Boa Vista (UTC-4)
+                      </option>
+                      <option value="America/Porto_Velho">
+                        Brasil - Porto Velho (UTC-4)
+                      </option>
+                      <option value="America/Rio_Branco">
+                        Brasil - Río Branco (UTC-5)
+                      </option>
+                      <option value="America/Santiago">
+                        Chile - Santiago (UTC-3)
+                      </option>
+                      <option value="America/Puerto_Montt">
+                        Chile - Puerto Montt (UTC-3)
+                      </option>
+                      <option value="Pacific/Easter">
+                        Chile - Isla de Pascua (UTC-5)
+                      </option>
+                      <option value="America/Bogota">
+                        Colombia - Bogotá (UTC-5)
+                      </option>
+                      <option value="America/Guayaquil">
+                        Ecuador - Quito (UTC-5)
+                      </option>
+                      <option value="Pacific/Galapagos">
+                        Ecuador - Galápagos (UTC-6)
+                      </option>
+                      <option value="America/Guyana">
+                        Guyana - Georgetown (UTC-4)
+                      </option>
+                      <option value="America/Paramaribo">
+                        Surinam - Paramaribo (UTC-3)
+                      </option>
+                      <option value="America/Lima">
+                        Perú - Lima (UTC-5)
+                      </option>
+                      <option value="America/Asuncion">
+                        Paraguay - Asunción (UTC-4)
+                      </option>
+                      <option value="America/Montevideo">
+                        Uruguay - Montevideo (UTC-3)
+                      </option>
+                      <option value="America/Caracas">
+                        Venezuela - Caracas (UTC-4)
+                      </option>
+                    </optgroup>
+                    <optgroup label="Otros">
+                      <option value="America/Mexico_City">
+                        México - Ciudad de México (UTC-6)
+                      </option>
+                    </optgroup>
                   </Select>
                 </motion.div>
               </div>
