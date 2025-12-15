@@ -132,7 +132,8 @@ export class MercadoPagoService {
         transaction_amount: plan.price,
         currency_id: plan.currency ?? 'ARS',
       },
-      back_url: `${frontendUrl}/panel/planes?businessId=${input.businessId}`,
+      back_url: `${frontendUrl}/panel/planes?businessId=${input.businessId}&checkout=success`,
+      notification_url: `${process.env.PUBLIC_BACKEND_URL ?? process.env.BACKEND_URL ?? 'http://localhost:3000'}/billing/webhook/mercadopago`,
       payer_email: input.customerEmail,
       external_reference: input.businessId,
     };
@@ -191,7 +192,6 @@ export class MercadoPagoService {
     };
 
     if (type !== 'preapproval' || !dataId) {
-      this.logger.debug('Ignoring Mercado Pago webhook', req.body);
       return { received: true };
     }
 
@@ -216,9 +216,6 @@ export class MercadoPagoService {
 
     const businessId = preapproval.external_reference;
     if (!businessId) {
-      this.logger.warn(
-        `Mercado Pago preapproval ${preapproval.id} sin external_reference`,
-      );
       return { received: true };
     }
 
