@@ -9,26 +9,17 @@ export class WhatsappService {
   private readonly logger = new Logger(WhatsappService.name);
   private readonly apiUrl = 'https://graph.facebook.com/v18.0';
   private readonly globalToken: string | null;
-  private readonly ownerNotifyTo: string | null;
-  private readonly globalPhoneNumberId: string | null;
 
   constructor(
     private prisma: PrismaService,
     private configService: ConfigService,
   ) {
+    // Token global de WhatsApp (WHATSAPP_ACCESS_TOKEN desde Railway)
     this.globalToken =
+      this.configService.get<string>('WHATSAPP_ACCESS_TOKEN') ||
       this.configService.get<string>('WHATSAPP_CLOUD_API_TOKEN') ||
       this.configService.get<string>('WHATSAPP_TOKEN') ||
       null;
-
-    this.ownerNotifyTo =
-      this.configService.get<string>('WHATSAPP_OWNER_NOTIFY_TO') || null;
-
-    // Permite tener un único número global de WhatsApp Cloud API
-    // para todos los negocios. Si un negocio no tiene su propio
-    // phoneNumberId configurado, usamos este valor.
-    this.globalPhoneNumberId =
-      this.configService.get<string>('WHATSAPP_GLOBAL_PHONE_NUMBER_ID') || null;
   }
 
   async sendConfirmation(bookingId: string) {
@@ -42,12 +33,15 @@ export class WhatsappService {
 
     if (!booking) throw new Error('Booking not found');
 
-    const message = `✅ *Reserva Confirmada*\n\nHola ${booking.clientName},\n\nTu reserva ha sido confirmada:\n\n📅 Fecha: ${booking.date.toLocaleDateString()}\n🕐 Hora: ${booking.startTime}\n💼 Servicio: ${booking.service.name}\n🏢 Negocio: ${booking.business.name}\n\n¡Te esperamos!`;
+    // Usar el número de WhatsApp del cliente, si existe
+    const clientPhone = (booking.clientWhatsappPhone ||
+      booking.clientPhone) as string;
+
+    const message = `✅ *Reserva Confirmada*\n\nHola ${booking.clientName},\n\nTu reserva ha sido confirmada:\n\n📅 Fecha: ${booking.date.toLocaleDateString()}\n🕐 Hora: ${booking.startTime}\n💼 Servicio: ${booking.service.name}\n💰 Precio: $${booking.service.price}\n🏢 Negocio: ${booking.business.name}\n\n¡Te esperamos!`;
 
     return this.sendMessage(
-      booking.business.whatsappToken,
-      booking.business.phoneNumber,
-      booking.clientPhone,
+      booking.business.whatsappPhoneNumberId as string | null,
+      clientPhone,
       message,
       bookingId,
       'confirmation',
@@ -65,12 +59,15 @@ export class WhatsappService {
 
     if (!booking) throw new Error('Booking not found');
 
+    // Usar el número de WhatsApp del cliente, si existe
+    const clientPhone = (booking.clientWhatsappPhone ||
+      booking.clientPhone) as string;
+
     const message = `⏰ *Recordatorio de Reserva*\n\nHola ${booking.clientName},\n\nTe recordamos tu reserva:\n\n📅 Fecha: ${booking.date.toLocaleDateString()}\n🕐 Hora: ${booking.startTime}\n💼 Servicio: ${booking.service.name}\n🏢 Negocio: ${booking.business.name}\n\n¡Te esperamos pronto!`;
 
     return this.sendMessage(
-      booking.business.whatsappToken,
-      booking.business.phoneNumber,
-      booking.clientPhone,
+      booking.business.whatsappPhoneNumberId as string | null,
+      clientPhone,
       message,
       bookingId,
       'reminder',
@@ -88,6 +85,10 @@ export class WhatsappService {
 
     if (!booking) throw new Error('Booking not found');
 
+    // Usar el número de WhatsApp del cliente, si existe
+    const clientPhone = (booking.clientWhatsappPhone ||
+      booking.clientPhone) as string;
+
     const message = `❌ *Reserva Cancelada*\n\nHola ${booking.clientName},\n\nTu reserva ha sido cancelada:\n\n📅 Fecha: ${booking.date.toLocaleDateString()}\n🕐 Hora: ${booking.startTime}\n💼 Servicio: ${booking.service.name}\n\nSi deseas reagendar, contáctanos.`;
 
     const cleanReason = reason?.trim();
@@ -95,56 +96,34 @@ export class WhatsappService {
       ? `${message}\n\nMotivo: ${cleanReason}`
       : message;
 
-    const result = await this.sendMessage(
-      booking.business.whatsappToken,
-      booking.business.phoneNumber,
-      booking.clientPhone,
+    return this.sendMessage(
+      booking.business.whatsappPhoneNumberId as string | null,
+      clientPhone,
       messageWithReason,
       bookingId,
       'cancellation',
     );
-
-    const notifyTo = this.ownerNotifyTo?.trim();
-    if (notifyTo) {
-      const ownerMessage = `📌 *Cancelación registrada*\n\nNegocio: ${booking.business.name}\nCliente: ${booking.clientName} (${booking.clientPhone})\nServicio: ${booking.service.name}\nFecha: ${booking.date.toLocaleDateString()}\nHora: ${booking.startTime}\n\nMotivo: ${cleanReason || 'Sin motivo'}`;
-      try {
-        await this.sendMessage(
-          booking.business.whatsappToken,
-          booking.business.phoneNumber,
-          notifyTo,
-          ownerMessage,
-          bookingId,
-          'owner_cancellation',
-        );
-      } catch {
-        // ignore owner notify errors
-      }
-    }
-
-    return result;
   }
 
   private async sendMessage(
-    token: string | null,
     phoneNumberId: string | null,
     to: string,
     message: string,
     bookingId: string,
     type: string,
   ) {
-    const resolvedToken = token || this.globalToken;
-    const resolvedPhoneNumberId = phoneNumberId || this.globalPhoneNumberId;
-
-    if (!resolvedToken || !resolvedPhoneNumberId) {
-      this.logger.warn('WhatsApp credentials not configured');
+    if (!phoneNumberId || !this.globalToken) {
+      this.logger.warn(
+        'WhatsApp not configured: missing phoneNumberId or token',
+      );
       return this.logMessage(bookingId, type, 'skipped', {
-        reason: 'No credentials',
+        reason: 'No phoneNumberId or token configured',
       });
     }
 
     try {
       const response = await axios.post<unknown>(
-        `${this.apiUrl}/${resolvedPhoneNumberId}/messages`,
+        `${this.apiUrl}/${phoneNumberId}/messages`,
         {
           messaging_product: 'whatsapp',
           to: to.replace(/\D/g, ''),
@@ -153,7 +132,7 @@ export class WhatsappService {
         },
         {
           headers: {
-            Authorization: `Bearer ${resolvedToken}`,
+            Authorization: `Bearer ${this.globalToken}`,
             'Content-Type': 'application/json',
           },
         },

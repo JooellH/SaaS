@@ -39,7 +39,10 @@ model Business {
   slug          String @unique
   phoneNumber   String?
   timezone      String @default("UTC")
-  whatsappToken String?
+  
+  // WhatsApp
+  whatsappToken String? // Deprecated: usar token global
+  whatsappPhoneNumberId String? // Phone Number ID para este negocio
   
   // Branding
   logoUrl       String?
@@ -96,24 +99,25 @@ model Service {
 }
 
 model Booking {
-  id          String @id @default(cuid())
-  businessId  String
-  business    Business @relation(fields: [businessId], references: [id])
-  serviceId   String
-  service     Service @relation(fields: [serviceId], references: [id])
-  date        DateTime
-  startTime   String
-  endTime     String
-  clientName  String
-  clientPhone String
-  clientEmail String?
-  status      String // CONFIRMED, CANCELLED, PENDING
-  metadata    Json?
+  id                   String @id @default(cuid())
+  businessId           String
+  business             Business @relation(fields: [businessId], references: [id])
+  serviceId            String
+  service              Service @relation(fields: [serviceId], references: [id])
+  date                 DateTime
+  startTime            String
+  endTime              String
+  clientName           String
+  clientPhone          String
+  clientEmail          String?
+  clientWhatsappPhone  String? // Número de WhatsApp del cliente
+  status               String // CONFIRMED, CANCELLED, PENDING
+  metadata             Json?
   
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @default(now()) @updatedAt
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @default(now()) @updatedAt
 
-  messageLogs MessageLog[]
+  messageLogs          MessageLog[]
 }
 
 model Schedule {
