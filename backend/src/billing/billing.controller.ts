@@ -12,6 +12,8 @@ import { AuthGuard } from '@nestjs/passport';
 import { BusinessService } from '../business/business.service';
 import type { Request as ExpressRequest } from 'express';
 import { StripeService } from './stripe.service';
+import { MercadoPagoService } from './mercadopago.service';
+import { Query } from '@nestjs/common';
 
 type AuthedRequest = ExpressRequest & {
   user: { userId: string; email?: string };
@@ -23,6 +25,7 @@ export class BillingController {
     private readonly billingService: BillingService,
     private readonly businessService: BusinessService,
     private readonly stripeService: StripeService,
+    private readonly mercadoPagoService: MercadoPagoService,
   ) {}
 
   @Get('plans')
@@ -49,10 +52,19 @@ export class BillingController {
   async createCheckoutSession(
     @Request() req: AuthedRequest,
     @Param('businessId') businessId: string,
+    @Query('provider') provider = 'stripe',
   ) {
     const business = await this.businessService.findOne(businessId);
     if (business.ownerId !== req.user.userId) {
       throw new NotFoundException('Business not found');
+    }
+
+    const normalized = provider.toLowerCase();
+    if (normalized === 'mercadopago') {
+      return this.mercadoPagoService.createCheckoutSession({
+        businessId,
+        customerEmail: req.user.email,
+      });
     }
 
     return this.stripeService.createCheckoutSession({
@@ -78,5 +90,10 @@ export class BillingController {
   @Post('webhook')
   handleStripeWebhook(@Request() req: ExpressRequest) {
     return this.stripeService.handleWebhook(req);
+  }
+
+  @Post('webhook/mercadopago')
+  handleMercadoPagoWebhook(@Request() req: ExpressRequest) {
+    return this.mercadoPagoService.handleWebhook(req);
   }
 }

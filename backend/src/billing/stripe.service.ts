@@ -7,6 +7,7 @@ import Stripe from 'stripe';
 import type { Request as ExpressRequest } from 'express';
 import { PrismaService } from '../prisma/prisma.service';
 import { BillingService } from './billing.service';
+import type { Prisma } from '@prisma/client';
 
 const BASIC_PLAN_ID = 'plan_basic';
 const PRO_PLAN_ID = 'plan_pro';
@@ -163,9 +164,10 @@ export class StripeService {
     let event: Stripe.Event;
     try {
       event = stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
-    } catch (err) {
-      this.logger.error('Webhook signature verification failed', err as Error);
-      throw err;
+    } catch (error) {
+      const asError = error instanceof Error ? error : new Error(String(error));
+      this.logger.error('Webhook signature verification failed', asError);
+      throw asError;
     }
 
     await this.billingService.getPlans();
@@ -173,6 +175,7 @@ export class StripeService {
     try {
       switch (event.type) {
         case 'checkout.session.completed': {
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
           const session = event.data.object as Stripe.Checkout.Session;
           if (typeof session.subscription === 'string') {
             const subscription = await stripe.subscriptions.retrieve(
@@ -185,14 +188,17 @@ export class StripeService {
         case 'customer.subscription.created':
         case 'customer.subscription.updated':
         case 'customer.subscription.deleted': {
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
           const subscription = event.data.object as Stripe.Subscription;
           await this.applyStripeSubscription(subscription);
           break;
         }
         case 'invoice.paid':
         case 'invoice.payment_failed': {
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
           const invoice = event.data.object as Stripe.Invoice;
-          const subscriptionRef = invoice.parent?.subscription_details?.subscription;
+          const subscriptionRef =
+            invoice.parent?.subscription_details?.subscription;
           const subscriptionId =
             typeof subscriptionRef === 'string'
               ? subscriptionRef
@@ -208,9 +214,10 @@ export class StripeService {
         default:
           break;
       }
-    } catch (err) {
-      this.logger.error(`Webhook handler failed for ${event.type}`, err as Error);
-      throw err;
+    } catch (error) {
+      const asError = error instanceof Error ? error : new Error(String(error));
+      this.logger.error(`Webhook handler failed for ${event.type}`, asError);
+      throw asError;
     }
 
     return { received: true };
@@ -257,33 +264,37 @@ export class StripeService {
         ? new Date(subscription.start_date * 1000)
         : new Date();
 
+    const updateData: Prisma.SubscriptionUncheckedUpdateInput = {
+      planId,
+      status: mappedStatus,
+      startDate,
+      endDate,
+      stripeCustomerId:
+        typeof subscription.customer === 'string'
+          ? subscription.customer
+          : null,
+      stripeSubscriptionId: subscription.id,
+      currentPeriodEnd,
+    };
+
+    const createData: Prisma.SubscriptionUncheckedCreateInput = {
+      businessId,
+      planId,
+      status: mappedStatus,
+      startDate,
+      endDate,
+      stripeCustomerId:
+        typeof subscription.customer === 'string'
+          ? subscription.customer
+          : null,
+      stripeSubscriptionId: subscription.id,
+      currentPeriodEnd,
+    };
+
     await this.prisma.subscription.upsert({
       where: { businessId },
-      update: {
-        planId,
-        status: mappedStatus,
-        startDate,
-        endDate,
-        stripeCustomerId:
-          typeof subscription.customer === 'string'
-            ? subscription.customer
-            : null,
-        stripeSubscriptionId: subscription.id,
-        currentPeriodEnd,
-      },
-      create: {
-        businessId,
-        planId,
-        status: mappedStatus,
-        startDate,
-        endDate,
-        stripeCustomerId:
-          typeof subscription.customer === 'string'
-            ? subscription.customer
-            : null,
-        stripeSubscriptionId: subscription.id,
-        currentPeriodEnd,
-      },
+      update: updateData,
+      create: createData,
     });
   }
 }

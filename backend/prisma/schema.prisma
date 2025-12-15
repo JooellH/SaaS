@@ -194,6 +194,11 @@ model Plan {
   subscriptions Subscription[]
 }
 
+enum PaymentProvider {
+  STRIPE
+  MERCADOPAGO
+}
+
 model Subscription {
   id         String @id @default(cuid())
   businessId String @unique
@@ -204,10 +209,16 @@ model Subscription {
   startDate  DateTime
   endDate    DateTime?
 
+  // Proveedor de pago usado para esta suscripción
+  provider PaymentProvider @default(STRIPE)
+
   // Stripe (opcional)
   stripeCustomerId     String?  @unique
   stripeSubscriptionId String?  @unique
   currentPeriodEnd     DateTime?
+
+  // Mercado Pago (opcional)
+  mpPreapprovalId String? @unique
 
   createdAt  DateTime @default(now())
   updatedAt  DateTime @default(now()) @updatedAt
