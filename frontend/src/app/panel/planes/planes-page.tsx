@@ -11,6 +11,7 @@ import { CheckCircle2, Sparkles } from "lucide-react";
 import ElectroBorder from "@/components/ui/electro-border";
 import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
+import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 
 interface Business {
@@ -68,6 +69,9 @@ export default function PlanesScreen() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [paymentProvider, setPaymentProvider] = useState<"stripe" | "mercadopago">(
+    "stripe",
+  );
 
   useEffect(() => {
     const loadBusinesses = async () => {
@@ -179,7 +183,9 @@ export default function PlanesScreen() {
     setError(null);
     setSuccess(null);
     try {
-      const res = await api.post(`/billing/checkout/${selectedBusinessId}`);
+      const res = await api.post(
+        `/billing/checkout/${selectedBusinessId}?provider=${paymentProvider}`,
+      );
       const url = (res.data as { url?: unknown })?.url;
       if (typeof url === "string" && url) {
         window.location.href = url;
@@ -250,9 +256,11 @@ export default function PlanesScreen() {
           <label className="text-sm text-slate-200/80">Negocio</label>
           <div className="flex items-center gap-2">
             {selectedBusiness?.logoUrl ? (
-              <img
+              <Image
                 src={selectedBusiness.logoUrl}
                 alt="Logo"
+                width={32}
+                height={32}
                 className="h-8 w-8 rounded-lg object-cover border border-white/10 bg-white/5"
                 onError={(e) => {
                   e.currentTarget.style.display = "none";
@@ -343,26 +351,73 @@ export default function PlanesScreen() {
       )}
 
       {!loadingPlans && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {sortedPlans.map((plan) => {
-            const effectivePlanId = access?.effectivePlanId ?? "";
-            const isCurrent = effectivePlanId === plan.id;
-            const isTrialPro = access?.trial?.isActive && plan.id === "plan_pro";
-            const paidProActive =
-              access?.subscription?.status === "ACTIVE" &&
-              access.subscription.planId === "plan_pro";
+        <>
+          {/* Payment Provider Selector */}
+          {viewerIsOwner && (
+            <Card className="bg-indigo-500/5 border border-indigo-400/20">
+              <div className="space-y-3">
+                <label className="text-sm font-medium text-white">
+                  Método de pago
+                </label>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="paymentProvider"
+                      value="stripe"
+                      checked={paymentProvider === "stripe"}
+                      onChange={(e) =>
+                        setPaymentProvider(
+                          e.target.value as "stripe" | "mercadopago",
+                        )
+                      }
+                      className="w-4 h-4"
+                    />
+                    <span className="text-sm text-slate-200">Stripe</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="paymentProvider"
+                      value="mercadopago"
+                      checked={paymentProvider === "mercadopago"}
+                      onChange={(e) =>
+                        setPaymentProvider(
+                          e.target.value as "stripe" | "mercadopago",
+                        )
+                      }
+                      className="w-4 h-4"
+                    />
+                    <span className="text-sm text-slate-200">
+                      Mercado Pago
+                    </span>
+                  </label>
+                </div>
+              </div>
+            </Card>
+          )}
 
-            const canCheckout =
-              viewerIsOwner && plan.id === "plan_pro" && !paidProActive;
-            const canManage = viewerIsOwner && paidProActive;
-            const buttonDisabled =
-              saving !== null ||
-              !viewerIsOwner ||
-              plan.id !== "plan_pro" ||
-              (!canCheckout && !canManage);
-            const limitsEntries = Object.entries(plan.limits || {});
-            const accent = plan.id === "plan_pro" ? "#8b5cf6" : "#22d3ee";
-            return (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {sortedPlans.map((plan) => {
+              const effectivePlanId = access?.effectivePlanId ?? "";
+              const isCurrent = effectivePlanId === plan.id;
+              const isTrialPro =
+                access?.trial?.isActive && plan.id === "plan_pro";
+              const paidProActive =
+                access?.subscription?.status === "ACTIVE" &&
+                access.subscription.planId === "plan_pro";
+
+              const canCheckout =
+                viewerIsOwner && plan.id === "plan_pro" && !paidProActive;
+              const canManage = viewerIsOwner && paidProActive;
+              const buttonDisabled =
+                saving !== null ||
+                !viewerIsOwner ||
+                plan.id !== "plan_pro" ||
+                (!canCheckout && !canManage);
+              const limitsEntries = Object.entries(plan.limits || {});
+              const accent = plan.id === "plan_pro" ? "#8b5cf6" : "#22d3ee";
+              return (
               <ElectroBorder
                 key={plan.id}
                 borderColor={accent}
@@ -459,8 +514,9 @@ export default function PlanesScreen() {
                 </Card>
               </ElectroBorder>
             );
-          })}
-        </div>
+            })}
+          </div>
+        </>
       )}
 
       {!loadingPlans && plans.length === 0 && (
