@@ -1,11 +1,18 @@
 import axios from "axios";
 
-// Ensure every request hits the Nest global prefix /api.
-const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-const normalizedBase = rawApiUrl.replace(/\/$/, "");
-const API_URL = normalizedBase.endsWith("/api")
-  ? normalizedBase
-  : `${normalizedBase}/api`;
+// Prefer same-origin proxy (`/api/*`) so we don't depend on build-time env in Docker.
+// On the server (Next Route Handlers) we can still call the backend directly.
+const API_URL =
+  typeof window === "undefined"
+    ? (() => {
+        const rawApiUrl =
+          process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+        const normalizedBase = rawApiUrl.replace(/\/$/, "");
+        return normalizedBase.endsWith("/api")
+          ? normalizedBase
+          : `${normalizedBase}/api`;
+      })()
+    : "/api";
 
 export const api = axios.create({
   baseURL: API_URL,
@@ -39,7 +46,7 @@ api.interceptors.response.use(
 
       try {
         const refreshToken = localStorage.getItem("refreshToken");
-        const response = await axios.post(`${API_URL}/auth/refresh`, {
+        const response = await axios.post(`/api/auth/refresh`, {
           refreshToken,
         });
 
@@ -51,7 +58,7 @@ api.interceptors.response.use(
       } catch (refreshError) {
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
-      window.location.href = "/inicio-sesion";
+        window.location.href = "/inicio-sesion";
         return Promise.reject(refreshError);
       }
     }

@@ -1,17 +1,18 @@
-FROM node:20-alpine AS builder
+FROM node:20-bookworm-slim AS builder
 WORKDIR /app
+ENV DATABASE_URL="postgresql://postgres:postgres@localhost:5432/postgres"
 
 COPY package*.json ./
 COPY prisma ./prisma/
 RUN npm ci
-RUN npx prisma generate
 
 COPY . .
 RUN npm run build
 
-FROM node:20-alpine AS runner
+FROM node:20-bookworm-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production
+ENV DATABASE_URL="postgresql://postgres:postgres@localhost:5432/postgres"
 
 COPY package*.json ./
 COPY prisma ./prisma/
