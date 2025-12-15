@@ -128,6 +128,9 @@ export class MercadoPagoService {
     const rate = await this.exchangeRateService.getRate('ARS');
     const amountInArs = Math.round(plan.price * rate * 100) / 100; // Plan price (USD) * Rate
 
+    const startDate = new Date();
+    startDate.setMinutes(startDate.getMinutes() + 10); // Add 10m buffer to prevent "past date" error
+
     const reason = `Suscripción Pro - Reserva`;
 
     const body = {
@@ -137,7 +140,7 @@ export class MercadoPagoService {
         frequency_type: 'months',
         transaction_amount: amountInArs,
         currency_id: 'ARS',
-        start_date: new Date().toISOString(), // Required field
+        start_date: startDate.toISOString(), // Required field
       },
       back_url: `${frontendUrl}/panel/planes?businessId=${input.businessId}&checkout=success`,
       notification_url: `${process.env.PUBLIC_BACKEND_URL ?? process.env.BACKEND_URL ?? 'http://localhost:3000'}/billing/webhook/mercadopago`,
