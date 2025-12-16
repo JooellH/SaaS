@@ -21,6 +21,7 @@ interface Business {
   slug: string;
   timezone: string;
   phoneNumber?: string | null;
+  // removed: whatsappPhoneNumberId
   logoUrl?: string | null;
   bannerUrl?: string | null;
 }
@@ -161,6 +162,7 @@ export default function AjustesScreen() {
       slug: form.slug,
       timezone: form.timezone,
       phoneNumber: form.phoneNumber?.trim() || undefined,
+      // removed: whatsappPhoneNumberId
       logoUrl: logoTrimmed && logoTrimmed.length > 0 ? logoTrimmed : null,
       bannerUrl:
         bannerTrimmed && bannerTrimmed.length > 0 ? bannerTrimmed : null,
@@ -533,24 +535,28 @@ export default function AjustesScreen() {
               </div>
 
               <motion.div variants={fadeUp} className="flex items-center gap-2">
-                <span className="chip">WhatsApp</span>
+                <span className="chip">Contacto y Notificaciones</span>
                 <p className="text-xs text-slate-400">
-                  Para confirmaciones y recordatorios automáticos.
+                  Teléfono público y destinatario de avisos.
                 </p>
               </motion.div>
               <div className="form-grid md:grid-cols-2">
-                <motion.div variants={fadeUp} className="space-y-2">
+                <motion.div variants={fadeUp} className="space-y-2 md:col-span-2">
                   <label className="block text-sm text-slate-200">
-                    Phone Number ID
+                    Teléfono del Negocio
                   </label>
                   <Input
                     type="text"
-                    placeholder="Ej: +54 9 351..."
+                    placeholder="+54 9 351..."
                     value={form.phoneNumber ?? ""}
                     onChange={(e) =>
                       setForm({ ...form, phoneNumber: e.target.value })
                     }
                   />
+                  <p className="text-xs text-slate-500 pt-1">
+                    Este número se mostrará en tu perfil público para que los clientes te contacten.
+                    Las notificaciones automáticas de WhatsApp se enviarán desde nuestro sistema central.
+                  </p>
                 </motion.div>
               </div>
 

@@ -23,6 +23,10 @@ export class CreateBusinessDto {
 
   @IsOptional()
   @IsString()
+  whatsappPhoneNumberId?: string;
+
+  @IsOptional()
+  @IsString()
   @Matches(/^(https?:\/\/|data:image\/|\/)/, {
     message: 'logoUrl must be a URL or data image',
   })

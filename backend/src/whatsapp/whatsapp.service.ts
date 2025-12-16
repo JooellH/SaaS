@@ -112,18 +112,25 @@ export class WhatsappService {
     bookingId: string,
     type: string,
   ) {
-    if (!phoneNumberId || !this.globalToken) {
+    // Use global phone number ID if not provided by business
+    const effectivePhoneNumberId =
+      phoneNumberId ||
+      this.configService.get<string>('WHATSAPP_PHONE_NUMBER_ID') ||
+      this.configService.get<string>('WHATSAPP_PHONE_NUMBER') ||
+      '';
+
+    if (!effectivePhoneNumberId || !this.globalToken) {
       this.logger.warn(
         'WhatsApp not configured: missing phoneNumberId or token',
       );
       return this.logMessage(bookingId, type, 'skipped', {
-        reason: 'No phoneNumberId or token configured',
+        reason: 'No phoneNumberId (business or global) or token configured',
       });
     }
 
     try {
       const response = await axios.post<unknown>(
-        `${this.apiUrl}/${phoneNumberId}/messages`,
+        `${this.apiUrl}/${effectivePhoneNumberId}/messages`,
         {
           messaging_product: 'whatsapp',
           to: to.replace(/\D/g, ''),
