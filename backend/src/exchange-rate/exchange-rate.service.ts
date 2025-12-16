@@ -1,11 +1,16 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import axios, { AxiosError } from 'axios';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
-export class ExchangeRateService {
+export class ExchangeRateService implements OnModuleInit {
   private readonly logger = new Logger(ExchangeRateService.name);
+
+  async onModuleInit() {
+    this.logger.log('Fetching initial exchange rates...');
+    await this.updateExchangeRates();
+  }
 
   private readonly mpCurrencies = [
     'ARS',
