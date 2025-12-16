@@ -201,12 +201,19 @@ export class MercadoPagoService {
     // Validar firma del webhook
     this.validateWebhookSignature(req);
 
+    this.logger.log(`Webhook received: ${JSON.stringify(req.body)}`);
+
     const { type, 'data.id': dataId } = (req.body || {}) as {
       type?: string;
       'data.id'?: string;
     };
 
-    if (type !== 'preapproval' || !dataId) {
+    // Accept both 'preapproval' and 'subscription_preapproval'
+    if (
+      (type !== 'preapproval' && type !== 'subscription_preapproval') ||
+      !dataId
+    ) {
+      this.logger.log(`Ignoring webhook type: ${type}`);
       return { received: true };
     }
 
