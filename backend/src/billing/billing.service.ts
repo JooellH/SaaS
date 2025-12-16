@@ -92,6 +92,8 @@ export class BillingService {
     if (!business) throw new NotFoundException('Business not found');
 
     const now = new Date();
+    // Trial is based on USER creation date, not business creation date.
+    // This prevents users from deleting and recreating businesses to reset trial.
     const trialEndsAt = this.addDays(business.owner.createdAt, TRIAL_DAYS);
     const trialMsLeft = trialEndsAt.getTime() - now.getTime();
     const trialActive = trialMsLeft > 0;
