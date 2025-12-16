@@ -12,6 +12,10 @@ type BillingAccess = {
     isExpired: boolean;
   };
   effectivePlanId: string;
+  subscription?: {
+    status: string;
+    planId: string;
+  } | null;
 };
 
 type Business = { id: string; name: string; ownerId?: string };
@@ -127,6 +131,13 @@ export default function TrialBanner() {
   }
 
   if (!access) return null;
+
+  // Si ya pagó (subscription ACTIVE y plan NO básico), NO mostrar banner de prueba
+  const isPaidPro =
+    access.subscription?.status === "ACTIVE" &&
+    access.subscription?.planId !== "plan_basic";
+
+  if (isPaidPro) return null;
 
   if (access.trial.isActive) {
     return (

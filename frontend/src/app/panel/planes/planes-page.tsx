@@ -34,6 +34,8 @@ interface Subscription {
   planId: string;
   status: string;
   plan: Plan;
+  provider: "STRIPE" | "MERCADOPAGO";
+  currentPeriodEnd?: string | null;
 }
 
 type BillingAccess = {
@@ -212,6 +214,34 @@ export default function PlanesScreen() {
     if (!selectedBusinessId) return;
     if (!viewerIsOwner) {
       setError("Solo el owner del negocio puede administrar el plan.");
+      return;
+    }
+
+    // Mercado Pago Handling
+    if (access?.subscription?.provider === "MERCADOPAGO") {
+      const endDate = access.subscription.currentPeriodEnd
+        ? new Date(access.subscription.currentPeriodEnd)
+        : null;
+
+      let message = "Ya realizaste el pago. Tu suscripción está activa.";
+
+      if (endDate) {
+        const now = new Date();
+        const diffTime = endDate.getTime() - now.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        const dateStr = endDate.toLocaleDateString();
+
+        if (diffDays > 0) {
+          message = `Todo listo. Tu suscripción se renovará automáticamente el ${dateStr} (faltan ${diffDays} días). Para gestionar tu pago, ve a tu cuenta de Mercado Pago > Suscripciones.`;
+        } else {
+          message = `Tu suscripción se renueva el ${dateStr}. Ve a Mercado Pago si necesitas gestionar el pago.`;
+        }
+      } else {
+        message += " Para gestionar pagos, ve a tu cuenta de Mercado Pago.";
+      }
+
+      setSuccess(message);
+      setError(null);
       return;
     }
 
