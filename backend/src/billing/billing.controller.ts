@@ -84,6 +84,13 @@ export class BillingController {
       throw new NotFoundException('Business not found');
     }
 
+    const subscription = await this.billingService.getSubscription(businessId);
+    if (subscription?.provider === 'MERCADOPAGO') {
+      throw new NotFoundException(
+        'La suscripción con Mercado Pago se gestiona desde tu cuenta de Mercado Pago.',
+      );
+    }
+
     return this.stripeService.createPortalSession({ businessId });
   }
 
