@@ -201,7 +201,7 @@ export class MercadoPagoService {
     // Validar firma del webhook
     this.validateWebhookSignature(req);
 
-    this.logger.log(`Webhook received: ${JSON.stringify(req.body)}`);
+
 
     let body = req.body;
     if (Buffer.isBuffer(body)) {
@@ -235,13 +235,13 @@ export class MercadoPagoService {
       (type !== 'preapproval' && type !== 'subscription_preapproval') ||
       !dataId
     ) {
-      this.logger.log(`Ignoring webhook type: ${type}`);
+
       return { received: true };
     }
 
     const accessToken = this.getAccessToken();
 
-    this.logger.log(`Processing preapproval ID: ${dataId}`);
+
 
     const response = await axios.get(`${this.apiBase}/preapproval/${dataId}`, {
       headers: {
