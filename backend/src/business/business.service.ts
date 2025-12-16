@@ -250,6 +250,7 @@ export class BusinessService {
       await tx.schedule.deleteMany({ where: { businessId: id } });
       await tx.service.deleteMany({ where: { businessId: id } });
       await tx.staff.deleteMany({ where: { businessId: id } });
+      await tx.subscription.deleteMany({ where: { businessId: id } });
       await tx.business.delete({ where: { id } });
     });
 
