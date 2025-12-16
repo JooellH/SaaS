@@ -195,12 +195,12 @@ export default function PlanesScreen() {
     } catch (err: unknown) {
       const message =
         typeof err === "object" &&
-        err !== null &&
-        "response" in err &&
-        typeof (err as { response?: { data?: { message?: string } } }).response
-          ?.data?.message === "string"
+          err !== null &&
+          "response" in err &&
+          typeof (err as { response?: { data?: { message?: string } } }).response
+            ?.data?.message === "string"
           ? (err as { response: { data: { message: string } } }).response.data
-              .message
+            .message
           : "No se pudo iniciar el checkout.";
       setError(message);
     } finally {
@@ -229,12 +229,12 @@ export default function PlanesScreen() {
     } catch (err: unknown) {
       const message =
         typeof err === "object" &&
-        err !== null &&
-        "response" in err &&
-        typeof (err as { response?: { data?: { message?: string } } }).response
-          ?.data?.message === "string"
+          err !== null &&
+          "response" in err &&
+          typeof (err as { response?: { data?: { message?: string } } }).response
+            ?.data?.message === "string"
           ? (err as { response: { data: { message: string } } }).response.data
-              .message
+            .message
           : "No se pudo abrir la gestión de suscripción.";
       setError(message);
     } finally {
@@ -316,7 +316,7 @@ export default function PlanesScreen() {
         </div>
       )}
 
-      {access?.trial?.isActive && (
+      {access?.trial?.isActive && !access?.subscription?.status && (
         <FormFeedback
           variant="success"
           message={
@@ -324,6 +324,13 @@ export default function PlanesScreen() {
               ? `Tenés prueba Pro gratis activa: te quedan ${access.trial.daysLeft} día(s).`
               : `El negocio tiene prueba Pro activa (beneficios Pro habilitados por el owner): quedan ${access.trial.daysLeft} día(s).`
           }
+        />
+      )}
+
+      {access?.subscription?.status === "ACTIVE" && access.subscription.planId === "plan_pro" && (
+        <FormFeedback
+          variant="success"
+          message="¡Suscripción Pro activa! Gracias por confiar en nosotros."
         />
       )}
 
@@ -418,102 +425,101 @@ export default function PlanesScreen() {
               const limitsEntries = Object.entries(plan.limits || {});
               const accent = plan.id === "plan_pro" ? "#8b5cf6" : "#22d3ee";
               return (
-              <ElectroBorder
-                key={plan.id}
-                borderColor={accent}
-                borderWidth={2}
-                distortion={plan.id === "plan_pro" ? 1.2 : 0.9}
-                animationSpeed={plan.id === "plan_pro" ? 1.0 : 0.7}
-                glowBlur={36}
-                radius={24}
-              >
-                <Card
-                  className={`space-y-4 h-full border-0 hover:border-0 shadow-none hover:shadow-none ${
-                    isCurrent ? "bg-indigo-500/5" : "bg-white/5"
-                  }`}
+                <ElectroBorder
+                  key={plan.id}
+                  borderColor={accent}
+                  borderWidth={2}
+                  distortion={plan.id === "plan_pro" ? 1.2 : 0.9}
+                  animationSpeed={plan.id === "plan_pro" ? 1.0 : 0.7}
+                  glowBlur={36}
+                  radius={24}
                 >
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between">
-                      <h2 className="text-xl font-semibold text-white">
-                        {plan.name}
-                      </h2>
-                      {isCurrent && (
-                        <span className="chip bg-indigo-500/15 text-indigo-100 border-indigo-400/30">
-                          {isTrialPro ? (
-                            <>
-                              <Sparkles className="w-3 h-3" /> En prueba
-                            </>
-                          ) : (
-                            "Actual"
-                          )}
+                  <Card
+                    className={`space-y-4 h-full border-0 hover:border-0 shadow-none hover:shadow-none ${isCurrent ? "bg-indigo-500/5" : "bg-white/5"
+                      }`}
+                  >
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <h2 className="text-xl font-semibold text-white">
+                          {plan.name}
+                        </h2>
+                        {isCurrent && (
+                          <span className="chip bg-indigo-500/15 text-indigo-100 border-indigo-400/30">
+                            {isTrialPro ? (
+                              <>
+                                <Sparkles className="w-3 h-3" /> En prueba
+                              </>
+                            ) : (
+                              "Actual"
+                            )}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-3xl font-semibold text-white">
+                        {plan.currency} {plan.price.toFixed(2)}
+                        <span className="text-sm text-slate-300 font-normal">
+                          {" "}/mes
                         </span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 text-sm">
+                      {limitsEntries.length === 0 ? (
+                        <div className="text-slate-300">Sin límites.</div>
+                      ) : (
+                        limitsEntries.map(([key, value]) => (
+                          <div key={key} className="flex justify-between">
+                            <span className="text-slate-200">
+                              {limitLabels[key] || key}
+                            </span>
+                            <span className="text-white font-semibold">
+                              {value < 0 ? "Ilimitado" : value}
+                            </span>
+                          </div>
+                        ))
                       )}
                     </div>
-                    <div className="text-3xl font-semibold text-white">
-                      {plan.currency} {plan.price.toFixed(2)}
-                      <span className="text-sm text-slate-300 font-normal">
-                        {" "}/mes
-                      </span>
-                    </div>
-                  </div>
 
-                  <div className="space-y-2 text-sm">
-                    {limitsEntries.length === 0 ? (
-                      <div className="text-slate-300">Sin límites.</div>
-                    ) : (
-                      limitsEntries.map(([key, value]) => (
-                        <div key={key} className="flex justify-between">
-                          <span className="text-slate-200">
-                            {limitLabels[key] || key}
-                          </span>
-                          <span className="text-white font-semibold">
-                            {value < 0 ? "Ilimitado" : value}
-                          </span>
-                        </div>
-                      ))
-                    )}
-                  </div>
-
-                  <Button
-                    onClick={() => {
-                      if (plan.id === "plan_pro") {
-                        if (canManage) return void openPortal();
-                        if (canCheckout) return void startCheckout();
-                      }
-                    }}
-                    disabled={buttonDisabled}
-                    className="w-full"
-                    variant={isCurrent ? "secondary" : "primary"}
-                  >
-                    {!viewerIsOwner ? (
-                      "Solo el owner puede cambiar"
-                    ) : plan.id !== "plan_pro" ? (
-                      isCurrent ? (
+                    <Button
+                      onClick={() => {
+                        if (plan.id === "plan_pro") {
+                          if (canManage) return void openPortal();
+                          if (canCheckout) return void startCheckout();
+                        }
+                      }}
+                      disabled={buttonDisabled}
+                      className="w-full"
+                      variant={isCurrent ? "secondary" : "primary"}
+                    >
+                      {!viewerIsOwner ? (
+                        "Solo el owner puede cambiar"
+                      ) : plan.id !== "plan_pro" ? (
+                        isCurrent ? (
+                          <>
+                            <CheckCircle2 className="w-4 h-4" />
+                            Plan actual
+                          </>
+                        ) : (
+                          "Gratis"
+                        )
+                      ) : canManage ? (
                         <>
                           <CheckCircle2 className="w-4 h-4" />
-                          Plan actual
+                          Administrar suscripción
                         </>
+                      ) : saving === "checkout" ? (
+                        "Abriendo checkout..."
+                      ) : saving === "portal" ? (
+                        "Abriendo..."
+                      ) : isTrialPro ? (
+                        "Activar Pro"
                       ) : (
-                        "Gratis"
-                      )
-                    ) : canManage ? (
-                      <>
-                        <CheckCircle2 className="w-4 h-4" />
-                        Administrar suscripción
-                      </>
-                    ) : saving === "checkout" ? (
-                      "Abriendo checkout..."
-                    ) : saving === "portal" ? (
-                      "Abriendo..."
-                    ) : isTrialPro ? (
-                      "Activar Pro"
-                    ) : (
-                      "Elegir plan"
-                    )}
-                  </Button>
-                </Card>
-              </ElectroBorder>
-            );
+                        "Elegir plan"
+                      )}
+                    </Button>
+                  </Card>
+                </ElectroBorder>
+              );
             })}
           </div>
         </>
