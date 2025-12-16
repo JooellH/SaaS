@@ -224,10 +224,11 @@ export class MercadoPagoService {
       }
     }
 
-    const { type, 'data.id': dataId } = (body || {}) as {
-      type?: string;
-      'data.id'?: string;
-    };
+    let type = body.type;
+    // Sometimes MP sends type inside the data object or at top level.
+    // In the log we see: type: "subscription_preapproval", data: { id: "..." }
+    
+    let dataId = body.data?.id || body['data.id'];
 
     // Accept both 'preapproval' and 'subscription_preapproval'
     if (
@@ -239,6 +240,8 @@ export class MercadoPagoService {
     }
 
     const accessToken = this.getAccessToken();
+
+    this.logger.log(`Processing preapproval ID: ${dataId}`);
 
     const response = await axios.get(`${this.apiBase}/preapproval/${dataId}`, {
       headers: {
