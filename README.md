@@ -306,14 +306,9 @@ Todos los derechos reservados.
 ## 🔮 Roadmap
 
 ### Próximas Características
-- [ ] Integración completa con Stripe
-- [ ] Sistema de notificaciones por email
-- [ ] Dashboard de métricas en tiempo real
 - [ ] App móvil (React Native)
 - [ ] Integración con Google Calendar
-- [ ] Sistema de reviews y ratings
 - [ ] Multi-idioma
-- [ ] Dark mode
 
 ---
 
