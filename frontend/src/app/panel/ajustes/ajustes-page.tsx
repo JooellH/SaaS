@@ -71,8 +71,7 @@ export default function AjustesScreen() {
     const maxBytes = field === "logoUrl" ? MAX_LOGO_BYTES : MAX_BANNER_BYTES;
     if (file.size > maxBytes) {
       setError(
-        `La imagen es muy pesada. Máximo ${
-          field === "logoUrl" ? "250KB" : "900KB"
+        `La imagen es muy pesada. Máximo ${field === "logoUrl" ? "250KB" : "900KB"
         }.`,
       );
       return;
@@ -546,7 +545,7 @@ export default function AjustesScreen() {
                   </label>
                   <Input
                     type="text"
-                    placeholder="ID de Meta WhatsApp"
+                    placeholder="Ej: +54 9 351..."
                     value={form.phoneNumber ?? ""}
                     onChange={(e) =>
                       setForm({ ...form, phoneNumber: e.target.value })
