@@ -203,7 +203,28 @@ export class MercadoPagoService {
 
     this.logger.log(`Webhook received: ${JSON.stringify(req.body)}`);
 
-    const { type, 'data.id': dataId } = (req.body || {}) as {
+    let body = req.body;
+    if (Buffer.isBuffer(body)) {
+      try {
+        body = JSON.parse(body.toString('utf-8'));
+      } catch (e) {
+        this.logger.error('Failed to parse buffer body');
+      }
+    } else if (
+      typeof body === 'object' &&
+      body !== null &&
+      'type' in body &&
+      body.type === 'Buffer' &&
+      Array.isArray(body.data)
+    ) {
+      try {
+         body = JSON.parse(Buffer.from(body.data).toString('utf-8'));
+      } catch (e) {
+         this.logger.error('Failed to parse buffer-like body');
+      }
+    }
+
+    const { type, 'data.id': dataId } = (body || {}) as {
       type?: string;
       'data.id'?: string;
     };
