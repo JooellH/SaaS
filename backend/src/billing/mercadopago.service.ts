@@ -132,7 +132,7 @@ export class MercadoPagoService {
       },
       back_url: `${frontendUrl}/panel/planes?businessId=${input.businessId}&checkout=success`,
       notification_url: `${process.env.PUBLIC_BACKEND_URL ?? process.env.BACKEND_URL ?? 'http://localhost:3000'}/billing/webhook/mercadopago`,
-      payer_email: input.customerEmail || 'no-email@example.com', // MP requires email
+      // removed payer_email so any MP user can pay
       external_reference: input.businessId,
     };
 
