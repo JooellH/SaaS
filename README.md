@@ -27,7 +27,7 @@ SaaS-project/
 
 ## Quick start (local)
 
-Requisitos: Node 20+, npm, y una DB Postgres.
+Requisitos: Node 20.9+ (por Next.js 16), npm, y una DB Postgres.
 
 ### 1) Backend (API)
 
