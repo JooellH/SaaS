@@ -1,0 +1,75 @@
+LICENCIA PROPIETARIA (TODOS LOS DERECHOS RESERVADOS)
+
+Copyright (c) 2024-2025 Joel Holz
+
+AVISO IMPORTANTE: Esta licencia busca restringir el uso/copia/distribución de este proyecto.
+No impide técnicamente que alguien copie el código; establece las condiciones legales de uso.
+Si necesitas máxima protección legal, consulta a un abogado y mantén el repositorio privado.
+
+1) DEFINICIONES
+"Software" significa todo el código fuente, binarios, scripts, configuraciones, bases de datos
+(esquemas), documentación y cualquier otro material incluido en este repositorio, incluyendo
+modificaciones, actualizaciones y obras derivadas.
+
+"Titular" significa la persona o entidad que posee los derechos del Software: Joel Holz.
+
+"Usuario" significa cualquier persona o entidad que acceda, copie, use o reciba el Software.
+
+2) TITULARIDAD
+El Software está protegido por leyes de propiedad intelectual y es propiedad exclusiva del Titular.
+Todos los derechos no concedidos expresamente en esta licencia quedan reservados.
+
+3) CONCESIÓN DE LICENCIA (MUY LIMITADA)
+Sujeto al cumplimiento estricto de esta licencia, el Titular concede al Usuario una licencia:
+- revocable,
+- no exclusiva,
+- no transferible,
+- no sublicenciable,
+para usar el Software únicamente para fines internos del Titular o con autorización expresa y
+previa por escrito del Titular.
+
+4) PROHIBICIONES
+Salvo autorización expresa y previa por escrito del Titular, se prohíbe:
+- Copiar, reproducir, redistribuir, publicar, comunicar o poner a disposición el Software, total
+  o parcialmente, por cualquier medio.
+- Modificar, adaptar, transformar, crear obras derivadas o realizar ingeniería inversa del Software.
+- Vender, alquilar, licenciar, sublicenciar, ceder, transferir o explotar comercialmente el Software.
+- Usar el Software para prestar un servicio a terceros (incluyendo SaaS/hosting/servicios gestionados)
+  o para construir un producto competidor.
+- Eliminar o alterar avisos de copyright, marcas, atribuciones o avisos legales.
+
+5) CONFIDENCIALIDAD
+El Software se considera información confidencial del Titular. El Usuario debe protegerlo con al
+menos el mismo grado de cuidado que usa para su propia información confidencial y no divulgarlo a
+terceros sin autorización previa por escrito del Titular.
+
+6) COMPONENTES DE TERCEROS
+El Software puede incluir o depender de componentes de terceros (por ejemplo, dependencias npm).
+Dichos componentes se rigen por sus propias licencias. Esta licencia se aplica únicamente al
+código/recursos propios del Titular dentro de este repositorio y no limita los derechos otorgados
+por licencias de terceros sobre sus respectivos componentes.
+
+7) AUSENCIA DE GARANTÍAS
+EL SOFTWARE SE PROVEE "TAL CUAL" ("AS IS"), SIN GARANTÍAS DE NINGÚN TIPO, EXPRESAS O IMPLÍCITAS,
+INCLUYENDO (SIN LIMITARSE A) GARANTÍAS DE COMERCIABILIDAD, IDONEIDAD PARA UN PROPÓSITO PARTICULAR,
+NO INFRACCIÓN, EXACTITUD O DISPONIBILIDAD.
+
+8) LIMITACIÓN DE RESPONSABILIDAD
+EN LA MEDIDA MÁXIMA PERMITIDA POR LA LEY, EN NINGÚN CASO EL TITULAR SERÁ RESPONSABLE POR DAÑOS
+INDIRECTOS, INCIDENTALES, ESPECIALES, PUNITIVOS O CONSECUENTES, NI POR PÉRDIDA DE BENEFICIOS,
+DATOS, NEGOCIO O REPUTACIÓN, DERIVADOS DE O RELACIONADOS CON EL USO O LA IMPOSIBILIDAD DE USO
+DEL SOFTWARE, AUNQUE SE HAYA ADVERTIDO LA POSIBILIDAD DE DICHOS DAÑOS.
+
+9) TERMINACIÓN
+La licencia se termina automáticamente si el Usuario incumple cualquiera de sus términos. Ante la
+terminación, el Usuario debe cesar el uso del Software y eliminar todas las copias en su poder o
+control, salvo que el Titular indique lo contrario por escrito.
+
+10) LEY APLICABLE
+Esta licencia se regirá por las leyes aplicables en la jurisdicción del Titular, salvo que una ley
+imperativa establezca lo contrario.
+
+11) CONTACTO / PERMISOS
+Para solicitar permisos (por ejemplo, uso comercial, redistribución, o licencias a terceros),
+contactar al Titular:
+Email: joelholz9@gmail.com
