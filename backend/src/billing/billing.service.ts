@@ -9,6 +9,9 @@ const TRIAL_DAYS = 7;
 type PlanLimits = Record<string, number>;
 const BASIC_PLAN_ID = 'plan_basic';
 const PRO_PLAN_ID = 'plan_pro';
+const FORCE_PRO_OWNER_EMAILS = new Set([
+  'railway.pro.20260324003717@reservapro.com',
+]);
 
 @Injectable()
 export class BillingService {
@@ -18,6 +21,10 @@ export class BillingService {
     const next = new Date(date);
     next.setDate(next.getDate() + days);
     return next;
+  }
+
+  private hasForcedProAccess(ownerEmail?: string | null) {
+    return !!ownerEmail && FORCE_PRO_OWNER_EMAILS.has(ownerEmail);
   }
 
   private async ensureDefaultPlans() {
@@ -84,7 +91,7 @@ export class BillingService {
     const business = await this.prisma.business.findUnique({
       where: { id: businessId },
       include: {
-        owner: { select: { createdAt: true } },
+        owner: { select: { createdAt: true, email: true } },
         subscription: { include: { plan: true } },
       },
     });
@@ -106,6 +113,48 @@ export class BillingService {
       subscription?.status === 'ACTIVE' && subscription.planId !== BASIC_PLAN_ID
         ? subscription
         : null;
+    const forcedPro = this.hasForcedProAccess(business.owner.email);
+
+    if (forcedPro) {
+      const forcedSubscription = paidActive
+        ? paidActive
+        : subscription
+          ? {
+              ...subscription,
+              planId: PRO_PLAN_ID,
+              status: 'ACTIVE',
+              plan: proPlan,
+            }
+          : {
+              id: `forced-pro-${businessId}`,
+              businessId,
+              planId: PRO_PLAN_ID,
+              status: 'ACTIVE',
+              startDate: now,
+              endDate: null,
+              provider: 'STRIPE',
+              stripeCustomerId: null,
+              stripeSubscriptionId: null,
+              currentPeriodEnd: null,
+              mpPreapprovalId: null,
+              createdAt: now,
+              updatedAt: now,
+              plan: proPlan,
+            };
+
+      return {
+        subscription: forcedSubscription,
+        trial: {
+          daysTotal: TRIAL_DAYS,
+          endsAt: trialEndsAt,
+          isActive: false,
+          daysLeft: 0,
+          isExpired: false,
+        },
+        effectivePlan: proPlan,
+        effectivePlanId: proPlan.id,
+      };
+    }
 
     const effectivePlan = paidActive
       ? paidActive.plan
